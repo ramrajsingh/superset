@@ -3,7 +3,7 @@
   "checkpoint_id": "01M1TSRFTTN78BG9BW1Y27PV5A",
   "strategy": "manual-commit",
   "branch": "blastradius",
-  "checkpoints_count": 5,
+  "checkpoints_count": 7,
   "files_touched": [
     "evidence/03-with-test-selection.txt",
     "tools/blastradius/blastradius.py",
@@ -16,13 +16,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 16,
-    "cache_creation_tokens": 12979,
-    "cache_read_tokens": 3348670,
-    "output_tokens": 6824,
-    "api_call_count": 8
+    "input_tokens": 162,
+    "cache_creation_tokens": 171882,
+    "cache_read_tokens": 13699981,
+    "output_tokens": 81598,
+    "api_call_count": 81
   }
 }

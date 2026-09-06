@@ -1,0 +1,62 @@
+Record our response to the Noon Curveball: graph evidence must be labelled by
+confidence and never presented as certain.
+
+First reconstruct, before any edit:
+  entire checkpoint explain 01M1TPKG7TYGQCJB01DH20TMF9
+and read BUILDATHON.md. That is our pre-Curveball stable state (commit c2ef90b).
+
+We are blastradius, Track 2. The implementation is tools/blastradius/blastradius.py.
+The Curveball card: "Graph is evidence, not an oracle." Requirements:
+  - must not present incomplete graph relationships as certain
+  - must identify when analysis may be partial
+  - must provide a safe fallback or verification path
+  - existing behaviour for fully-resolved code must keep working
+  - must include a test or fixture representing incomplete analysis
+
+Before touching any file, run and save to evidence/:
+  entire graph impact --symbol graph_impact --repo . --depth 2 --format json
+  entire graph impact --symbol select_tests --repo . --depth 2 --format json
+Those are the two functions that consume relationship and impact evidence.
+
+Then implement a three-tier confidence label on every reported row:
+  CONFIRMED  - static relation (CALLS, PARAM_TYPE, USES_TYPE, RETURNS_TYPE,
+               DATA_FLOWS) whose endpoint file is NOT in partial_failures
+  HEURISTIC  - FILE_CHANGES_WITH co-change edges (statistical, not structural),
+               or any endpoint in a file the graph failed to parse
+  UNVERIFIED - absence claims. "No TESTS edge" must read "no TESTS edge found -
+               unresolved, verify manually", never "untested"
+
+Then:
+  - --ci gates ONLY on CONFIRMED untested reach, never on UNVERIFIED. That is
+    the safe fallback.
+  - print the exact grep/pytest command to verify each UNVERIFIED row
+  - add a fixture test: a saved impact payload containing partial_failures,
+    asserting the affected row is downgraded and the wording never asserts
+    certainty
+  - rows with fully-resolved evidence must behave exactly as they do now
+
+Our real partial-analysis case, found before the card: grep finds callers of
+get_guest_rls_filters at superset/jinja_context.py:297 and
+superset/connectors/sqla/models.py:891 that the graph misses through the
+module-level security_manager singleton.
+
+Work on branch blastradius. Each worktree edit costs a ~4.6 minute graph
+reindex, so plan the full edit before writing files.
+
+---
+
+<task-notification>
+<task-id>btf0zsm1d</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-apple-10x-rs-centaur-centaur-backend/976c9f8e-25eb-4547-a128-a01a8227ec9e/tasks/btf0zsm1d.output</output-file>
+<status>completed</status>
+<summary>Background command "Queue impact evidence for select_tests" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+while background job is running is how complicated it is to create a visual graph and show blast radius and the impacted tests
+
+---
+
+yes, build it in the scratchpad while we wait
