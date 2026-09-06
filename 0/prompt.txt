@@ -74,3 +74,7 @@ yes, run mermaid-cli to verify it renders
 <status>completed</status>
 <summary>Background command "Render all four diagrams with mermaid-cli" completed (exit code 0)</summary>
 </task-notification>
+
+---
+
+commit it once the live run confirms
