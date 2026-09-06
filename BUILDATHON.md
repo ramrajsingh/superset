@@ -65,29 +65,41 @@ python tools/blastradius/blastradius.py --symbol <name> [--ref HEAD] [--ci]
 
 ### The blast radius as a picture
 
-`--mermaid` renders the same analysis as a diagram, with the confidence model
-carried by two independent visual channels so neither can imply the other: the
-**arrow** says how well we know the change reaches a symbol, the **node border**
-says what we know about tests for it. This is the real run against
-`get_guest_rls_filters`:
+`--mermaid` renders the same analysis as a diagram. Each variable gets its own
+visual channel so none can imply another, and each is encoded twice so no
+reading depends on colour alone:
+
+| Variable | Channel | Encoding |
+|---|---|---|
+| Reach confidence | edge | thick green `==>` CONFIRMED · thin amber `-.->` HEURISTIC |
+| Coverage | node border | solid green a `TESTS` edge was found · dashed grey none found · faint dotted not evaluated |
+| Blast radius | node fill | alpha by distance — dense at one hop, faint at two |
+
+Fills are alpha over the renderer's own background rather than opaque colours,
+so the diagram survives being rendered light or dark. This block is the verbatim
+output of `--mermaid` against the live graph, checked byte-for-byte against
+`evidence/05-live-mermaid.md`:
 
 ```mermaid
 graph LR
-    classDef focusnode stroke:#58a6ff,stroke-width:3px
-    classDef covered stroke:#3fb950,stroke-width:2px
-    classDef unresolved stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4
-    classDef nocoverage stroke:#8b949e,stroke-width:1px
-    classDef tests stroke:#bc8cff,stroke-width:2px
+    classDef focusnode stroke:#58a6ff,stroke-width:3px,fill:#58a6ff66
+    classDef tests stroke:#bc8cff,stroke-width:2px,fill:#bc8cff20
+    classDef covered1 stroke:#3fb950,stroke-width:2px,fill:#58a6ff38
+    classDef covered2 stroke:#3fb950,stroke-width:2px,fill:#58a6ff14
+    classDef unresolved1 stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4,fill:#58a6ff38
+    classDef unresolved2 stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4,fill:#58a6ff14
+    classDef nocoverage1 stroke:#8b949e,stroke-width:1px,stroke-dasharray:1 3,fill:#58a6ff38
+    classDef nocoverage2 stroke:#8b949e,stroke-width:1px,stroke-dasharray:1 3,fill:#58a6ff14
 
     focus(("get_guest_rls_filters")):::focusnode
-    n0{{"UPDATING.md"}}:::nocoverage
-    n1["BaseDatasource<br/>superset/connectors/sqla/models.py:184"]:::unresolved
-    n2["Explorable<br/>superset/explorables/base.py:181"]:::unresolved
-    n3["GuestTokenRlsRule<br/>superset/security/guest_token.py:134"]:::unresolved
-    n4["SupersetSecurityManager<br/>superset/security/manager.py:1738"]:::unresolved
-    n5["get_guest_rls_filters_str<br/>superset/security/manager.py:5240"]:::unresolved
-    n6{{"manager_test.py<br/>tests/unit_tests/security/manager_test.py"}}:::nocoverage
-    n7["get_rls_cache_key<br/>superset/security/manager.py:5245"]:::unresolved
+    n0{{"UPDATING.md"}}:::nocoverage1
+    n1["BaseDatasource<br/>superset/connectors/sqla/models.py:184"]:::unresolved1
+    n2["Explorable<br/>superset/explorables/base.py:181"]:::unresolved1
+    n3["GuestTokenRlsRule<br/>superset/security/guest_token.py:134"]:::unresolved1
+    n4["SupersetSecurityManager<br/>superset/security/manager.py:1738"]:::unresolved1
+    n5["get_guest_rls_filters_str<br/>superset/security/manager.py:5240"]:::unresolved1
+    n6{{"manager_test.py<br/>tests/unit_tests/security/manager_test.py"}}:::nocoverage1
+    n7["get_rls_cache_key<br/>superset/security/manager.py:5245"]:::unresolved2
 
     focus -.->|co-change| n0
     focus ==>|type consumer| n1
@@ -97,16 +109,44 @@ graph LR
     focus ==>|call| n5
     focus -.->|co-change| n6
     focus ==>|call| n7
+    linkStyle 1,2,3,4,5,7 stroke:#3fb950,stroke-width:2.5px
+    linkStyle 0,6 stroke:#d29922,stroke-width:1.5px
 ```
 
-- **Arrow** — `==>` CONFIRMED (resolved static relation) · `-.->` HEURISTIC (co-change, or an endpoint in a file the graph could not parse).
-- **Node border** — solid green a `TESTS` edge was found · dashed grey no `TESTS` edge found (unresolved, *not* a claim of no coverage) · thin grey coverage not evaluated.
-- A test file reached by a `TESTS` edge is drawn as a test node. A test file that merely *co-changes* with the touched code is drawn as a co-change node, because that is the weaker claim — `manager_test.py` above is the second kind, and the picture says so.
+- **Edge** — how we know the change reaches it: thick green `==>` CONFIRMED (resolved static relation) · thin amber `-.->` HEURISTIC (co-change, or an endpoint in a file the graph could not parse).
+- **Node border** — what we know about tests: solid green a TESTS edge was found · dashed grey no TESTS edge found (unresolved, not a claim of no coverage) · faint dotted coverage not evaluated.
+- **Node fill** — blast radius: denser fill is one hop from the change, fainter is two. Distance, not danger — a two-hop reach can matter more than a one-hop one.
+- Every variable is encoded twice (weight and hue, dash and hue, alpha), so no reading depends on colour alone. A test file reached by a `TESTS` edge is a purple test node; a test file that merely *co-changes* is a co-change node, because that is the weaker claim.
 
 Node labels carry `file:line`, so the diagram stays as checkable as the table.
 Node ids are synthetic (`n0`, `n1`, …) because `.`, `/` and `:` are mermaid parse
 errors, and the renderer caps at 40 nodes: a hairball is a worse failure than a
 table, so past the cap it draws what it can and says how much it omitted.
+
+**Rendering was verified by rendering, and that mattered.** The diagram has 10
+structural tests — node ids, arrow styles, classes, escaping, truncation — and
+all of them passed over two bugs that only appeared when the SVG was actually
+produced with `mermaid-cli`:
+
+1. `Mod.fn<T>` rendered as **`fn`**. Mermaid parses labels as HTML, so `<T>` was
+   consumed as a tag. Valid SVG, no error, characters silently gone.
+2. `class n0 covered,hop1` produced the literal class attribute `"covered,hop1"`,
+   which matches neither `.covered` nor `.hop1`. Every style rule was emitted
+   into the SVG and none of them applied.
+
+Both are the failure mode this project is about: output that looks clean and
+quietly is not. Angle brackets are now escaped as numeric entities, and the
+class pairs are composed into single classes up front. Each has a regression
+test naming how it was found, because neither would have been caught by reading
+the grammar.
+
+The rendered SVGs are in `evidence/rendered/`, including the before-and-after
+for the swallowed generic:
+
+```
+escape-regression-BEFORE-fix.svg   <p>fn<br />c/d.py:12</p>
+escape-regression.svg              <p>fn&lt;T&gt;<br />c/d.py:12</p>
+```
 
 Rendering is pure — it never queries the graph. With `--from-json` it replays a
 saved payload, so the whole run is offline:
@@ -166,13 +206,14 @@ superset/connectors/sqla/models.py:891: for rule in security_manager.get_guest_r
 entire graph diff --base c2ef90bff2 --head HEAD --json
 ```
 
-Symbol-level, not line-level. It names the 20 changed symbols in
-`blastradius.py` — `Symbol.short_name`, `Reach`, `Coverage`,
-`Coverage.confidence`, `Impact`, `classify_reach`, `parse_impact`,
-`graph_impact`, `select_tests`, `gating_rows`, `coverage_verify` among them —
-and the 15 added in `test_blastradius.py`. That is the confidence model as a
-diff: three new types and one new classifier, with the existing pipeline
-functions rewired rather than replaced.
+Symbol-level, not line-level, across the whole Curveball response. It names the
+25 changed symbols in `blastradius.py` — `Symbol.display_name`, `Reach`,
+`Coverage`, `Coverage.confidence`, `Impact`, `classify_reach`, `parse_impact`,
+`graph_impact`, `select_tests`, `gating_rows`, `coverage_verify`, `mermaid`,
+`mermaid_node`, `mermaid_escape`, `mermaid_block` among them — and the 25 added
+in `test_blastradius.py`. That is the confidence model as a diff: three new
+types, one new classifier and one renderer, with the existing pipeline functions
+rewired rather than replaced.
 
 **5. Live verification run** — `evidence/03-with-test-selection.txt`
 
@@ -269,8 +310,8 @@ shape of `entire graph impact` output.
 
 ```
 $ pytest tools/blastradius/test_blastradius.py -q
-............                                                             [100%]
-12 passed
+..........................                                               [100%]
+26 passed
 ```
 
 `test_missing_tests_edge_is_reported_as_unresolved_not_as_untested` asserts the
@@ -307,7 +348,7 @@ python tools/blastradius/blastradius.py --symbol X --mermaid    # diagram instea
 python tools/blastradius/blastradius.py --symbol get_guest_rls_filters \
     --from-json evidence/02-impact-before-change.json --no-tests --mermaid
 
-pytest tools/blastradius/test_blastradius.py   # 22 tests, no graph needed
+pytest tools/blastradius/test_blastradius.py   # 26 tests, no graph needed
 ```
 
 Exit codes: `0` nothing to flag · `1` findings (or, with `--ci`, untested reach) · `2` the graph could not answer.
@@ -329,6 +370,9 @@ Not applicable — we did not opt into the Best Use of Databricks category.
 - Confidence is a property of the *edge*, not of the finding's importance. A `HEURISTIC` co-change row can matter more than a `CONFIRMED` type-consumer row; the label says how well we know it, not how much it should worry you.
 - The `partial_failures` downgrade is file-granular. A file that fails to parse at line 12 downgrades every endpoint in it, including symbols the parser read perfectly well.
 - `--ci` gating on `CONFIRMED` reach means a genuine coverage gap reached only through dynamic dispatch will not fail the build. That is the deliberate trade: the gate is quiet where the evidence is weak, and the `UNVERIFIED` rows carry the commands to check it by hand.
+- The diagram encodes three variables and stops there. A fourth — relation kind, say — would need a channel that does not exist without hurting legibility, so relation kind stays on the edge label as text.
+- `linkStyle` is index-based, so edge colouring is only correct because the renderer emits the edges itself. Hand-editing the generated mermaid will silently mis-colour edges.
+- Diagram styling is verified by rendering with `mermaid-cli`, which is a dev-time dependency, not a runtime one. The tool itself emits text and never shells out to render.
 
 **Next steps**
 
@@ -336,3 +380,4 @@ Not applicable — we did not opt into the Best Use of Databricks category.
 - Post the report as a PR comment before a human opens the diff — the mermaid block renders inline on GitHub, so the diagram costs nothing extra to ship.
 - Emit the selected tests as a CI job matrix, so the saving is realised rather than just reported.
 - Expose the same report as a tool an agent can call, so the check happens before the change is written rather than after.
+- Add the `mermaid-cli` render to CI as a golden-image check, so a future styling change cannot silently stop applying the way `class a,b` did.

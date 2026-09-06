@@ -84,27 +84,48 @@ STATISTICAL_RELATIONS = frozenset({"FILE_CHANGES_WITH"})
 # picture is a worse failure than a table.
 MERMAID_MAX_NODES = 40
 
-# Stroke-only styling, no fills: the diagram is embedded in Markdown that may be
-# rendered on a light or a dark background, and mermaid supplies the fill.
-MERMAID_CLASSDEFS = (
-    "classDef focusnode stroke:#58a6ff,stroke-width:3px",
-    "classDef covered stroke:#3fb950,stroke-width:2px",
-    "classDef unresolved stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4",
-    "classDef nocoverage stroke:#8b949e,stroke-width:1px",
-    "classDef tests stroke:#bc8cff,stroke-width:2px",
-)
+# Three variables, three loci, each encoded twice so colour is never the only
+# carrier: reach confidence lives on the EDGE (weight + hue), coverage on the
+# node BORDER (hue + dash), blast radius on the node FILL (alpha).
+#
+# Fills are alpha over whatever the renderer's own background is, never opaque:
+# the diagram is embedded in Markdown that may be rendered light or dark, and a
+# solid fill would fight the theme.
+# Border — what we know about tests.
+MERMAID_BORDERS = {
+    "covered": "stroke:#3fb950,stroke-width:2px",
+    "unresolved": "stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4",
+    "nocoverage": "stroke:#8b949e,stroke-width:1px,stroke-dasharray:1 3",
+}
+
+# Fill — distance from the change, denser nearer the epicentre. Alpha over the
+# renderer's own background, never opaque: this is embedded in Markdown that may
+# be rendered light or dark, and a solid fill would fight the theme.
+MERMAID_HOP_FILLS = {1: "fill:#58a6ff38", 2: "fill:#58a6ff14"}
+
+# Edge hue by reach confidence, applied by index through `linkStyle`.
+MERMAID_EDGE_COLOURS = {
+    CONFIRMED: "#3fb950",
+    HEURISTIC: "#d29922",
+    "TESTS": "#bc8cff",
+}
 
 MERMAID_LEGEND = (
-    "**Arrow** — how we know the change reaches it: "
-    "`==>` CONFIRMED (resolved static relation) · "
-    "`-.->` HEURISTIC (co-change, or an endpoint in a file the graph could not parse).",
+    "**Edge** — how we know the change reaches it: "
+    "thick green `==>` CONFIRMED (resolved static relation) · "
+    "thin amber `-.->` HEURISTIC (co-change, or an endpoint in a file the graph "
+    "could not parse).",
     "**Node border** — what we know about tests: "
     "solid green a TESTS edge was found · "
     "dashed grey no TESTS edge found (unresolved, not a claim of no coverage) · "
-    "thin grey coverage not evaluated.",
-    "A test file reached by a `TESTS` edge is drawn as a test node (purple). A "
-    "test file that merely *co-changes* with the touched code is drawn as a "
-    "co-change node, because that is the weaker claim.",
+    "faint dotted coverage not evaluated.",
+    "**Node fill** — blast radius: denser fill is one hop from the change, "
+    "fainter is two. Distance, not danger — a two-hop reach can matter more than "
+    "a one-hop one.",
+    "Every variable is encoded twice (weight and hue, dash and hue, alpha), so "
+    "no reading depends on colour alone. A test file reached by a `TESTS` edge "
+    "is a purple test node; a test file that merely *co-changes* is a co-change "
+    "node, because that is the weaker claim.",
 )
 
 
@@ -459,9 +480,42 @@ def test_command(coverages: list[Coverage], reach: list[Reach]) -> str | None:
     return f"pytest {' '.join(sorted(paths))}" if paths else None
 
 
+def mermaid_classdefs() -> list[str]:
+    """One class per (border, fill) pair, rather than two classes per node.
+
+    Mermaid joins a multi-class assignment into a single literal class attribute
+    — `class="node default covered,hop1"` — so neither `.covered` nor `.hop1`
+    matches and the styling silently does nothing. Composing the pairs up front
+    keeps every node on exactly one class.
+    """
+    defs = [
+        "classDef focusnode stroke:#58a6ff,stroke-width:3px,fill:#58a6ff66",
+        "classDef tests stroke:#bc8cff,stroke-width:2px,fill:#bc8cff20",
+    ]
+    defs += [
+        f"classDef {border}{hop} {style},{fill}"
+        for border, style in MERMAID_BORDERS.items()
+        for hop, fill in MERMAID_HOP_FILLS.items()
+    ]
+    return defs
+
+
 def mermaid_escape(text: str) -> str:
-    """Mermaid label text. `#` first: the entity escapes we emit start with one."""
-    return text.replace("#", "#35;").replace('"', "#quot;").replace("\n", " ")
+    """Mermaid label text, as numeric entities.
+
+    `#` is substituted first because every escape we emit starts with one.
+    Angle brackets matter more than they look: mermaid parses labels as HTML, so
+    an unescaped `Mod.fn<T>` renders as `fn` — the type parameter is swallowed
+    with no error at all. Silent character loss is the one failure this tool
+    cannot afford.
+    """
+    return (
+        text.replace("#", "#35;")
+        .replace('"', "#quot;")
+        .replace("<", "#60;")
+        .replace(">", "#62;")
+        .replace("\n", " ")
+    )
 
 
 def mermaid_node(node_id: str, symbol: Symbol, shape: str = "square") -> str:
@@ -498,27 +552,32 @@ def mermaid(
     shown = impact.reach[:max_nodes]
 
     lines = ["graph LR"]
-    lines += [f"    {d}" for d in MERMAID_CLASSDEFS]
+    lines += [f"    {d}" for d in mermaid_classdefs()]
     lines.append("")
     lines.append(mermaid_node("focus", Symbol(symbol, "", 0), "focus") + ":::focusnode")
 
     test_ids: dict[str, str] = {}
     edges: list[str] = []
+    edge_colours: list[str] = []
+
     for index, hop in enumerate(shown):
         node_id = f"n{index}"
         shape = "file" if hop.symbol.kind == "file" else "square"
 
         coverage = by_location.get(hop.symbol.location)
         if coverage is None:
-            css = "nocoverage"
+            border = "nocoverage"
         elif coverage.tests:
-            css = "covered"
+            border = "covered"
         else:
-            css = "unresolved"
+            border = "unresolved"
 
-        lines.append(mermaid_node(node_id, hop.symbol, shape) + f":::{css}")
+        hop_band = min(max(hop.distance, 1), max(MERMAID_HOP_FILLS))
+        lines.append(mermaid_node(node_id, hop.symbol, shape) + f":::{border}{hop_band}")
+
         arrow = "==>" if hop.confidence == CONFIRMED else "-.->"
         edges.append(f"    focus {arrow}|{mermaid_escape(hop.label)}| {node_id}")
+        edge_colours.append(hop.confidence)
 
         for path in coverage.tests if coverage else ():
             if path not in test_ids:
@@ -528,13 +587,28 @@ def mermaid(
                     + ":::tests"
                 )
             edges.append(f"    {test_ids[path]} -->|TESTS| {node_id}")
+            edge_colours.append("TESTS")
 
     omitted = len(impact.reach) - len(shown)
     if omitted > 0:
-        lines.append(f'    more["… {omitted} more reachable, not drawn"]:::nocoverage')
+        lines.append(
+            f'    more["… {omitted} more reachable, not drawn"]:::nocoverage2'
+        )
         edges.append("    focus -.->|truncated| more")
+        edge_colours.append(HEURISTIC)
 
-    return "\n".join(lines + [""] + edges)
+    # linkStyle is index-based, so it is only safe because we emitted the edges.
+    link_styles = []
+    for kind, colour in MERMAID_EDGE_COLOURS.items():
+        indices = [i for i, k in enumerate(edge_colours) if k == kind]
+        if indices:
+            width = "2.5px" if kind == CONFIRMED else "1.5px"
+            link_styles.append(
+                f"    linkStyle {','.join(str(i) for i in indices)} "
+                f"stroke:{colour},stroke-width:{width}"
+            )
+
+    return "\n".join(lines + [""] + edges + link_styles)
 
 
 def mermaid_block(symbol: str, impact: Impact, coverages: list[Coverage] | None = None) -> str:

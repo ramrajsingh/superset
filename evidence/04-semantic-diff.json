@@ -9,54 +9,30 @@
       "changes": [
         {
           "type": "added",
-          "kind": "code_fence",
-          "name": "code_fence_9_text",
-          "new_signature": "markdown code fence text",
-          "after_start_line": 104,
+          "kind": "section",
+          "name": "The-blast-radius-as-a-picture",
+          "new_signature": "markdown heading The blast radius as a picture",
+          "after_start_line": 66,
           "dependents_count": 0
         },
         {
           "type": "added",
           "kind": "code_fence",
-          "name": "code_fence_11_text",
-          "new_signature": "markdown code fence text",
-          "after_start_line": 135,
-          "dependents_count": 0
-        },
-        {
-          "type": "added",
-          "kind": "code_fence",
-          "name": "code_fence_12_text",
-          "new_signature": "markdown code fence text",
-          "after_start_line": 138,
-          "dependents_count": 0
-        },
-        {
-          "type": "added",
-          "kind": "code_fence",
-          "name": "code_fence_13_text",
-          "new_signature": "markdown code fence text",
-          "after_start_line": 192,
-          "dependents_count": 0
-        },
-        {
-          "type": "added",
-          "kind": "code_fence",
-          "name": "code_fence_14_text",
-          "new_signature": "markdown code fence text",
-          "after_start_line": 196,
+          "name": "code_fence_3_mermaid",
+          "new_signature": "markdown code fence mermaid",
+          "after_start_line": 74,
           "dependents_count": 0
         },
         {
           "type": "renamed",
           "kind": "code_fence",
-          "name": "code_fence_15_bash",
+          "name": "code_fence_5_bash",
           "old_name": "code_fence_9_bash",
-          "new_name": "code_fence_15_bash",
+          "new_name": "code_fence_5_bash",
           "old_signature": "markdown code fence bash",
           "new_signature": "markdown code fence bash",
           "before_start_line": 102,
-          "after_start_line": 219,
+          "after_start_line": 114,
           "dependents_count": 0,
           "similarity": 1,
           "reconciliation": "RENAMED"
@@ -64,10 +40,349 @@
         {
           "type": "added",
           "kind": "code_fence",
-          "name": "code_fence_16_text",
+          "name": "code_fence_9_text",
           "new_signature": "markdown code fence text",
-          "after_start_line": 226,
+          "after_start_line": 133,
+          "dependents_count": 1
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_11_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 139,
           "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_12_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 145,
+          "dependents_count": 0
+        },
+        {
+          "type": "renamed",
+          "kind": "code_fence",
+          "name": "code_fence_13_text",
+          "old_name": "code_fence_5_text",
+          "new_name": "code_fence_13_text",
+          "old_signature": "markdown code fence text",
+          "new_signature": "markdown code fence text",
+          "before_start_line": 61,
+          "after_start_line": 157,
+          "dependents_count": 0,
+          "similarity": 1,
+          "reconciliation": "RENAMED"
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_14_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 161,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_15_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 165,
+          "dependents_count": 0
+        },
+        {
+          "type": "renamed",
+          "kind": "code_fence",
+          "name": "code_fence_16_text",
+          "old_name": "code_fence_3_text",
+          "new_name": "code_fence_16_text",
+          "old_signature": "markdown code fence text",
+          "new_signature": "markdown code fence text",
+          "before_start_line": 53,
+          "after_start_line": 167,
+          "dependents_count": 0,
+          "similarity": 1,
+          "reconciliation": "RENAMED"
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_17_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 179,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_18_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 181,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_19_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 213,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_20_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 216,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_21_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 270,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_22_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 274,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_23_bash",
+          "new_signature": "markdown code fence bash",
+          "after_start_line": 297,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "Offline:-replay-saved-evidence-no-graph-query-and-no-index-build",
+          "new_signature": "markdown heading Offline: replay saved evidence, no graph query and no index build",
+          "after_start_line": 306,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "code_fence",
+          "name": "code_fence_24_text",
+          "new_signature": "markdown code fence text",
+          "after_start_line": 311,
+          "dependents_count": 0
+        }
+      ]
+    },
+    {
+      "path": "evidence/04-semantic-diff.json",
+      "status": "A",
+      "language": "JSON",
+      "changes": [
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "base",
+          "new_signature": "json key base",
+          "after_start_line": 2,
+          "dependents_count": 729
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "head",
+          "new_signature": "json key head",
+          "after_start_line": 3,
+          "dependents_count": 85
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "files",
+          "new_signature": "json key files",
+          "after_start_line": 4,
+          "dependents_count": 328
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "path",
+          "new_signature": "json key path",
+          "after_start_line": 6,
+          "dependents_count": 1724
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "status",
+          "new_signature": "json key status",
+          "after_start_line": 7,
+          "dependents_count": 1427
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "language",
+          "new_signature": "json key language",
+          "after_start_line": 8,
+          "dependents_count": 221
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "changes",
+          "new_signature": "json key changes",
+          "after_start_line": 9,
+          "dependents_count": 509
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "type",
+          "new_signature": "json key type",
+          "after_start_line": 11,
+          "dependents_count": 10088
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "kind",
+          "new_signature": "json key kind",
+          "after_start_line": 12,
+          "dependents_count": 436
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "name",
+          "new_signature": "json key name",
+          "after_start_line": 13,
+          "dependents_count": 6999
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "new_signature",
+          "new_signature": "json key new_signature",
+          "after_start_line": 14,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "after_start_line",
+          "new_signature": "json key after_start_line",
+          "after_start_line": 15,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "dependents_count",
+          "new_signature": "json key dependents_count",
+          "after_start_line": 16,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "old_name",
+          "new_signature": "json key old_name",
+          "after_start_line": 54,
+          "dependents_count": 9
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "new_name",
+          "new_signature": "json key new_name",
+          "after_start_line": 55,
+          "dependents_count": 25
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "old_signature",
+          "new_signature": "json key old_signature",
+          "after_start_line": 56,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "before_start_line",
+          "new_signature": "json key before_start_line",
+          "after_start_line": 58,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "similarity",
+          "new_signature": "json key similarity",
+          "after_start_line": 61,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "reconciliation",
+          "new_signature": "json key reconciliation",
+          "after_start_line": 62,
+          "dependents_count": 4
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "warnings",
+          "new_signature": "json key warnings",
+          "after_start_line": 780,
+          "dependents_count": 245
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "code",
+          "new_signature": "json key code",
+          "after_start_line": 782,
+          "dependents_count": 593
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "severity",
+          "new_signature": "json key severity",
+          "after_start_line": 783,
+          "dependents_count": 22
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "file_path",
+          "new_signature": "json key file_path",
+          "after_start_line": 784,
+          "dependents_count": 32
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "effect_on_semantic_completeness",
+          "new_signature": "json key effect_on_semantic_completeness",
+          "after_start_line": 785,
+          "dependents_count": 1
+        },
+        {
+          "type": "added",
+          "kind": "section",
+          "name": "detail",
+          "new_signature": "json key detail",
+          "after_start_line": 786,
+          "dependents_count": 164
         }
       ]
     },
@@ -109,23 +424,31 @@
           "kind": "class",
           "name": "Symbol",
           "before_start_line": 64,
-          "after_start_line": 95,
-          "dependents_count": 14
+          "after_start_line": 123,
+          "dependents_count": 18
         },
         {
           "type": "added",
           "kind": "method",
           "name": "Symbol.short_name",
           "new_signature": "def short_name(self) -\u003e str",
-          "after_start_line": 108,
+          "after_start_line": 136,
           "dependents_count": 9
+        },
+        {
+          "type": "added",
+          "kind": "method",
+          "name": "Symbol.display_name",
+          "new_signature": "def display_name(self) -\u003e str",
+          "after_start_line": 140,
+          "dependents_count": 68
         },
         {
           "type": "body_changed",
           "kind": "class",
           "name": "Reach",
           "before_start_line": 78,
-          "after_start_line": 113,
+          "after_start_line": 152,
           "dependents_count": 11
         },
         {
@@ -133,31 +456,31 @@
           "kind": "class",
           "name": "Coverage",
           "new_signature": "class Coverage",
-          "after_start_line": 126,
-          "dependents_count": 14
+          "after_start_line": 165,
+          "dependents_count": 17
         },
         {
           "type": "added",
           "kind": "method",
           "name": "Coverage.confidence",
           "new_signature": "def confidence(self) -\u003e str: # A TESTS edge is positive evidence, and inherits the reach's standing. # No edge is an absence, which is never better than UNVERIFIED.",
-          "after_start_line": 135,
-          "dependents_count": 24
+          "after_start_line": 174,
+          "dependents_count": 26
         },
         {
           "type": "added",
           "kind": "class",
           "name": "Impact",
           "new_signature": "class Impact",
-          "after_start_line": 144,
-          "dependents_count": 19
+          "after_start_line": 183,
+          "dependents_count": 28
         },
         {
           "type": "added",
           "kind": "function",
           "name": "classify_reach",
           "new_signature": "def classify_reach(relation: str, file_path: str, partial_files: frozenset[str]) -\u003e tuple[str, str]",
-          "after_start_line": 202,
+          "after_start_line": 241,
           "dependents_count": 1
         },
         {
@@ -165,8 +488,8 @@
           "kind": "function",
           "name": "parse_impact",
           "new_signature": "def parse_impact(payload: Any) -\u003e Impact",
-          "after_start_line": 218,
-          "dependents_count": 3
+          "after_start_line": 257,
+          "dependents_count": 4
         },
         {
           "type": "signature_changed",
@@ -175,7 +498,7 @@
           "old_signature": "def graph_impact(symbol: str, repo: str, depth: int) -\u003e tuple[list[Reach], list[str]]",
           "new_signature": "def graph_impact(symbol: str, repo: str, depth: int) -\u003e Impact",
           "before_start_line": 137,
-          "after_start_line": 263,
+          "after_start_line": 302,
           "dependents_count": 1
         },
         {
@@ -185,7 +508,7 @@
           "old_signature": "def select_tests(reach: list[Reach], repo: str) -\u003e tuple[dict[str, list[str]], list[Symbol]]",
           "new_signature": "def select_tests(reach: list[Reach], repo: str) -\u003e list[Coverage]",
           "before_start_line": 225,
-          "after_start_line": 325,
+          "after_start_line": 364,
           "dependents_count": 1
         },
         {
@@ -193,7 +516,7 @@
           "kind": "function",
           "name": "gating_rows",
           "new_signature": "def gating_rows(coverages: list[Coverage]) -\u003e list[Coverage]",
-          "after_start_line": 376,
+          "after_start_line": 415,
           "dependents_count": 3
         },
         {
@@ -201,7 +524,7 @@
           "kind": "function",
           "name": "coverage_verify",
           "new_signature": "def coverage_verify(symbol: Symbol) -\u003e list[str]",
-          "after_start_line": 391,
+          "after_start_line": 430,
           "dependents_count": 2
         },
         {
@@ -209,7 +532,7 @@
           "kind": "function",
           "name": "grep_command",
           "new_signature": "def grep_command(name: str) -\u003e str",
-          "after_start_line": 399,
+          "after_start_line": 438,
           "dependents_count": 2
         },
         {
@@ -217,7 +540,7 @@
           "kind": "function",
           "name": "reach_verify",
           "new_signature": "def reach_verify(hop: Reach) -\u003e str",
-          "after_start_line": 403,
+          "after_start_line": 442,
           "dependents_count": 1
         },
         {
@@ -227,15 +550,47 @@
           "old_signature": "def test_command(covered: dict[str, list[str]], reach: list[Reach]) -\u003e str | None",
           "new_signature": "def test_command(coverages: list[Coverage], reach: list[Reach]) -\u003e str | None",
           "before_start_line": 274,
-          "after_start_line": 414,
+          "after_start_line": 453,
           "dependents_count": 1
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "mermaid_escape",
+          "new_signature": "def mermaid_escape(text: str) -\u003e str",
+          "after_start_line": 462,
+          "dependents_count": 3
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "mermaid_node",
+          "new_signature": "def mermaid_node(node_id: str, symbol: Symbol, shape: str = \"square\") -\u003e str",
+          "after_start_line": 467,
+          "dependents_count": 3
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "mermaid",
+          "new_signature": "def mermaid( symbol: str, impact: Impact, coverages: list[Coverage] | None = None, max_nodes: int = MERMAID_MAX_NODES, ) -\u003e str",
+          "after_start_line": 482,
+          "dependents_count": 22
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "mermaid_block",
+          "new_signature": "def mermaid_block(symbol: str, impact: Impact, coverages: list[Coverage] | None = None) -\u003e str",
+          "after_start_line": 540,
+          "dependents_count": 2
         },
         {
           "type": "body_changed",
           "kind": "function",
           "name": "bucket",
           "before_start_line": 283,
-          "after_start_line": 423,
+          "after_start_line": 549,
           "dependents_count": 66
         },
         {
@@ -243,7 +598,7 @@
           "kind": "function",
           "name": "tag",
           "new_signature": "def tag(confidence: str) -\u003e str",
-          "after_start_line": 437,
+          "after_start_line": 563,
           "dependents_count": 507
         },
         {
@@ -251,7 +606,7 @@
           "kind": "function",
           "name": "completeness_lines",
           "new_signature": "def completeness_lines(impact: Impact) -\u003e list[str]",
-          "after_start_line": 441,
+          "after_start_line": 567,
           "dependents_count": 1
         },
         {
@@ -261,7 +616,7 @@
           "old_signature": "def report(symbol: str, claim: Claim, confirmed: list[Reach], silent: list[Reach], warnings: list[str], covered: dict[str, list[str]] | None = None, uncovered: list[Symbol] | None = None, command: str | None = None) -\u003e str",
           "new_signature": "def report( symbol: str, claim: Claim, confirmed: list[Reach], silent: list[Reach], impact: Impact, coverages: list[Coverage] | None = None, command: str | None = None, ) -\u003e str",
           "before_start_line": 297,
-          "after_start_line": 467,
+          "after_start_line": 593,
           "dependents_count": 745
         },
         {
@@ -269,7 +624,7 @@
           "kind": "function",
           "name": "main",
           "before_start_line": 348,
-          "after_start_line": 562,
+          "after_start_line": 688,
           "dependents_count": 249
         }
       ]
@@ -317,7 +672,7 @@
           "name": "query",
           "new_signature": "json key query",
           "after_start_line": 6,
-          "dependents_count": 4835
+          "dependents_count": 4836
         },
         {
           "type": "added",
@@ -349,7 +704,7 @@
           "name": "focus",
           "new_signature": "json key focus",
           "after_start_line": 10,
-          "dependents_count": 78
+          "dependents_count": 82
         },
         {
           "type": "added",
@@ -357,7 +712,7 @@
           "name": "name",
           "new_signature": "json key name",
           "after_start_line": 11,
-          "dependents_count": 6997
+          "dependents_count": 6999
         },
         {
           "type": "added",
@@ -373,7 +728,7 @@
           "name": "kind",
           "new_signature": "json key kind",
           "after_start_line": 13,
-          "dependents_count": 435
+          "dependents_count": 436
         },
         {
           "type": "added",
@@ -381,7 +736,7 @@
           "name": "file_path",
           "new_signature": "json key file_path",
           "after_start_line": 14,
-          "dependents_count": 30
+          "dependents_count": 32
         },
         {
           "type": "added",
@@ -461,7 +816,7 @@
           "name": "relation",
           "new_signature": "json key relation",
           "after_start_line": 34,
-          "dependents_count": 26
+          "dependents_count": 27
         },
         {
           "type": "added",
@@ -517,7 +872,7 @@
           "name": "detail",
           "new_signature": "json key detail",
           "after_start_line": 106,
-          "dependents_count": 163
+          "dependents_count": 164
         },
         {
           "type": "added",
@@ -533,7 +888,7 @@
           "name": "partial_failures",
           "new_signature": "json key partial_failures",
           "after_start_line": 111,
-          "dependents_count": 2
+          "dependents_count": 3
         },
         {
           "type": "added",
@@ -541,7 +896,7 @@
           "name": "code",
           "new_signature": "json key code",
           "after_start_line": 113,
-          "dependents_count": 591
+          "dependents_count": 593
         },
         {
           "type": "added",
@@ -659,7 +1014,7 @@
           "kind": "function",
           "name": "_impact",
           "new_signature": "def _impact() -\u003e Impact",
-          "after_start_line": 58,
+          "after_start_line": 63,
           "dependents_count": 0
         },
         {
@@ -667,15 +1022,15 @@
           "kind": "function",
           "name": "by_name",
           "new_signature": "def by_name(impact: Impact, name: str) -\u003e Reach",
-          "after_start_line": 62,
-          "dependents_count": 8
+          "after_start_line": 67,
+          "dependents_count": 9
         },
         {
           "type": "added",
           "kind": "function",
           "name": "test_endpoint_in_an_unparsed_file_is_downgraded",
           "new_signature": "def test_endpoint_in_an_unparsed_file_is_downgraded(impact: Impact) -\u003e None",
-          "after_start_line": 69,
+          "after_start_line": 74,
           "dependents_count": 0
         },
         {
@@ -683,7 +1038,7 @@
           "kind": "function",
           "name": "test_co_change_is_never_confirmed",
           "new_signature": "def test_co_change_is_never_confirmed(impact: Impact) -\u003e None",
-          "after_start_line": 78,
+          "after_start_line": 83,
           "dependents_count": 0
         },
         {
@@ -691,7 +1046,7 @@
           "kind": "function",
           "name": "test_resolved_static_relations_still_confirm",
           "new_signature": "def test_resolved_static_relations_still_confirm(impact: Impact) -\u003e None",
-          "after_start_line": 86,
+          "after_start_line": 91,
           "dependents_count": 0
         },
         {
@@ -699,7 +1054,7 @@
           "kind": "function",
           "name": "test_reach_ordering_and_locations_are_unchanged",
           "new_signature": "def test_reach_ordering_and_locations_are_unchanged(impact: Impact) -\u003e None",
-          "after_start_line": 94,
+          "after_start_line": 99,
           "dependents_count": 0
         },
         {
@@ -707,7 +1062,7 @@
           "kind": "function",
           "name": "test_ci_gates_on_confirmed_reach_only",
           "new_signature": "def test_ci_gates_on_confirmed_reach_only(impact: Impact) -\u003e None",
-          "after_start_line": 105,
+          "after_start_line": 110,
           "dependents_count": 0
         },
         {
@@ -715,7 +1070,7 @@
           "kind": "function",
           "name": "test_missing_tests_edge_is_reported_as_unresolved_not_as_untested",
           "new_signature": "def test_missing_tests_edge_is_reported_as_unresolved_not_as_untested(impact: Impact) -\u003e None",
-          "after_start_line": 118,
+          "after_start_line": 123,
           "dependents_count": 0
         },
         {
@@ -723,7 +1078,7 @@
           "kind": "function",
           "name": "test_every_unresolved_row_prints_its_verification_command",
           "new_signature": "def test_every_unresolved_row_prints_its_verification_command(impact: Impact) -\u003e None",
-          "after_start_line": 133,
+          "after_start_line": 138,
           "dependents_count": 0
         },
         {
@@ -731,7 +1086,7 @@
           "kind": "function",
           "name": "test_report_labels_every_reach_row",
           "new_signature": "def test_report_labels_every_reach_row(impact: Impact) -\u003e None",
-          "after_start_line": 145,
+          "after_start_line": 150,
           "dependents_count": 0
         },
         {
@@ -739,7 +1094,7 @@
           "kind": "function",
           "name": "test_completeness_note_scopes_failures_to_the_analysed_language",
           "new_signature": "def test_completeness_note_scopes_failures_to_the_analysed_language(impact: Impact) -\u003e None",
-          "after_start_line": 154,
+          "after_start_line": 159,
           "dependents_count": 0
         },
         {
@@ -747,7 +1102,7 @@
           "kind": "function",
           "name": "test_a_clean_payload_downgrades_nothing",
           "new_signature": "def test_a_clean_payload_downgrades_nothing() -\u003e None",
-          "after_start_line": 162,
+          "after_start_line": 167,
           "dependents_count": 0
         },
         {
@@ -755,7 +1110,7 @@
           "kind": "function",
           "name": "test_absence_of_evidence_footer_names_the_known_dynamic_dispatch_gap",
           "new_signature": "def test_absence_of_evidence_footer_names_the_known_dynamic_dispatch_gap() -\u003e None",
-          "after_start_line": 174,
+          "after_start_line": 179,
           "dependents_count": 0
         },
         {
@@ -763,7 +1118,7 @@
           "kind": "function",
           "name": "test_symbol_short_name_survives_qualification",
           "new_signature": "def test_symbol_short_name_survives_qualification() -\u003e None",
-          "after_start_line": 181,
+          "after_start_line": 186,
           "dependents_count": 0
         },
         {
@@ -771,7 +1126,87 @@
           "kind": "function",
           "name": "test_file_nodes_are_not_asked_to_verify_their_own_extension",
           "new_signature": "def test_file_nodes_are_not_asked_to_verify_their_own_extension() -\u003e None",
-          "after_start_line": 186,
+          "after_start_line": 191,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "node_ids",
+          "new_signature": "def node_ids(diagram: str) -\u003e list[str]",
+          "after_start_line": 202,
+          "dependents_count": 2
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_node_ids_carry_no_path_punctuation",
+          "new_signature": "def test_mermaid_node_ids_carry_no_path_punctuation(impact: Impact) -\u003e None",
+          "after_start_line": 206,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_labels_keep_file_line_so_the_picture_stays_checkable",
+          "new_signature": "def test_mermaid_labels_keep_file_line_so_the_picture_stays_checkable( impact: Impact, ) -\u003e None",
+          "after_start_line": 214,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_arrow_encodes_reach_confidence",
+          "new_signature": "def test_mermaid_arrow_encodes_reach_confidence(impact: Impact) -\u003e None",
+          "after_start_line": 221,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_border_encodes_coverage_independently_of_reach",
+          "new_signature": "def test_mermaid_border_encodes_coverage_independently_of_reach(impact: Impact) -\u003e None",
+          "after_start_line": 246,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_marks_reach_it_did_not_evaluate_for_coverage",
+          "new_signature": "def test_mermaid_marks_reach_it_did_not_evaluate_for_coverage(impact: Impact) -\u003e None",
+          "after_start_line": 270,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_truncates_rather_than_drawing_an_unreadable_hairball",
+          "new_signature": "def test_mermaid_truncates_rather_than_drawing_an_unreadable_hairball( impact: Impact, ) -\u003e None",
+          "after_start_line": 277,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_escapes_label_punctuation_that_breaks_the_parser",
+          "new_signature": "def test_mermaid_escapes_label_punctuation_that_breaks_the_parser() -\u003e None",
+          "after_start_line": 285,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_names_a_file_node_by_basename_not_by_extension",
+          "new_signature": "def test_mermaid_names_a_file_node_by_basename_not_by_extension() -\u003e None",
+          "after_start_line": 291,
+          "dependents_count": 0
+        },
+        {
+          "type": "added",
+          "kind": "function",
+          "name": "test_mermaid_block_is_pasteable_markdown",
+          "new_signature": "def test_mermaid_block_is_pasteable_markdown(impact: Impact) -\u003e None",
+          "after_start_line": 300,
           "dependents_count": 0
         }
       ]

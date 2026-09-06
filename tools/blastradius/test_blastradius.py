@@ -203,6 +203,15 @@ def node_ids(diagram: str) -> list[str]:
     return re.findall(r"^    ([A-Za-z][A-Za-z0-9_]*)[\[({]", diagram, re.MULTILINE)
 
 
+def node_class(diagram: str, label: str) -> str:
+    """The `:::class` on the node whose label contains `label`."""
+    line = next(
+        ln for ln in diagram.splitlines()
+        if label in ln and ":::" in ln and not ln.strip().startswith("classDef")
+    )
+    return line.rsplit(":::", 1)[1]
+
+
 def test_mermaid_node_ids_carry_no_path_punctuation(impact: Impact) -> None:
     """`.` `/` `:` in an id is a mermaid parse error, so ids are synthetic."""
     ids = node_ids(mermaid("get_guest_rls_filters", impact))
@@ -257,13 +266,11 @@ def test_mermaid_border_encodes_coverage_independently_of_reach(impact: Impact) 
             Coverage(confirmed.symbol, confirmed.confidence),
         ],
     )
-    covered_line = next(
-        ln for ln in diagram.splitlines() if "get_sqla_row_level_filters" in ln
-    )
-    unresolved_line = next(ln for ln in diagram.splitlines() if "get_rls_cache_key" in ln)
-
-    assert covered_line.endswith(":::covered")
-    assert unresolved_line.endswith(":::unresolved")
+    assert node_class(diagram, "get_sqla_row_level_filters").startswith("covered")
+    assert node_class(diagram, "get_rls_cache_key").startswith("unresolved")
+    # Every class the nodes reference must actually be defined.
+    defined = set(re.findall(r"^    classDef (\w+) ", diagram, re.M))
+    assert set(re.findall(r":::(\w+)", diagram)) <= defined
     assert "-->|TESTS|" in diagram
 
 
@@ -271,7 +278,36 @@ def test_mermaid_marks_reach_it_did_not_evaluate_for_coverage(impact: Impact) ->
     """No coverage argument is not the same as coverage that came back empty."""
     diagram = mermaid("get_guest_rls_filters", impact)
     assert ":::unresolved" not in diagram
-    assert diagram.count(":::nocoverage") == len(impact.reach)
+    assert len(re.findall(r":::nocoverage[12]\b", diagram)) == len(impact.reach)
+
+
+def test_mermaid_fill_intensity_tracks_distance_from_the_change(impact: Impact) -> None:
+    """Blast radius is the fill: denser one hop out, fainter two."""
+    diagram = mermaid("get_guest_rls_filters", impact)
+    assert node_class(diagram, "get_guest_rls_filters_str") == "nocoverage1"  # 1 hop
+    assert node_class(diagram, "get_rls_cache_key") == "nocoverage2"  # 2 hops
+    # Distance and confidence are separate channels and must not be conflated:
+    # this row is HEURISTIC reach but still one hop out.
+    assert node_class(diagram, "get_sqla_row_level_filters") == "nocoverage1"
+    assert "fill:#58a6ff38" in diagram and "fill:#58a6ff14" in diagram
+
+
+def test_mermaid_edge_hue_tracks_reach_confidence(impact: Impact) -> None:
+    """linkStyle is index-based, so the indices must match the edges we emitted."""
+    diagram = mermaid("get_guest_rls_filters", impact)
+    styles = {
+        colour: [int(i) for i in idx.split(",")]
+        for idx, colour in re.findall(
+            r"linkStyle ([\d,]+) stroke:(#[0-9a-f]{6})", diagram
+        )
+    }
+    edges = re.findall(r"^    focus (==>|-\.->)\|", diagram, re.M)
+    confirmed = {i for i, arrow in enumerate(edges) if arrow == "==>"}
+    heuristic = {i for i, arrow in enumerate(edges) if arrow == "-.->"}
+
+    assert set(styles["#3fb950"]) == confirmed
+    assert set(styles["#d29922"]) == heuristic
+    assert confirmed and heuristic, "fixture should exercise both"
 
 
 def test_mermaid_truncates_rather_than_drawing_an_unreadable_hairball(
@@ -284,8 +320,39 @@ def test_mermaid_truncates_rather_than_drawing_an_unreadable_hairball(
 
 def test_mermaid_escapes_label_punctuation_that_breaks_the_parser() -> None:
     hostile = Symbol('weird"name#1', "a/b.py", 7)
-    assert mermaid_escape(hostile.display_name) == 'weird#quot;name#35;1'
+    assert mermaid_escape(hostile.display_name) == "weird#quot;name#35;1"
     assert '"weird#quot;name#35;1<br/>a/b.py:7"' in mermaid_node("n0", hostile)
+
+
+def test_mermaid_escapes_angle_brackets_so_generics_survive_the_html_parser() -> None:
+    """Regression: `Mod.fn<T>` rendered as `fn` — mermaid ate `<T>` as a tag.
+
+    Confirmed by rendering with mermaid-cli, not by reading the grammar: the
+    failure produced a valid SVG with the characters silently missing.
+    """
+    assert mermaid_escape("fn<T>") == "fn#60;T#62;"
+    node = mermaid_node("n0", Symbol("Mod.fn<T>", "c/d.py", 12))
+    assert '"fn#60;T#62;<br/>c/d.py:12"' in node
+    assert "<T>" not in node
+    # The line break we insert ourselves must stay a real tag.
+    assert "<br/>" in node
+
+
+def test_every_node_carries_exactly_one_class(impact: Impact) -> None:
+    """Regression: mermaid renders `class n0 a,b` as the literal class "a,b".
+
+    Neither `.a` nor `.b` then matches, so the styling silently does nothing —
+    caught by rendering with mermaid-cli and finding the fills missing from the
+    SVG, not by reading the source.
+    """
+    diagram = mermaid("get_guest_rls_filters", impact)
+    assert "," not in "".join(re.findall(r":::(\S+)", diagram))
+    for line in diagram.splitlines():
+        if line.strip().startswith(("classDef", "linkStyle", "graph")) or not line.strip():
+            continue
+        if "-->" in line or "==>" in line or "-.->" in line:
+            continue
+        assert line.count(":::") == 1, line
 
 
 def test_mermaid_names_a_file_node_by_basename_not_by_extension() -> None:
@@ -301,6 +368,7 @@ def test_mermaid_block_is_pasteable_markdown(impact: Impact) -> None:
     block = mermaid_block("get_guest_rls_filters", impact)
     assert block.startswith("```mermaid\ngraph LR")
     assert "\n```\n" in block
-    assert "**Arrow**" in block and "**Node border**" in block
+    for channel in ("**Edge**", "**Node border**", "**Node fill**"):
+        assert channel in block, channel
     # The legend must not restate an absence as a coverage claim.
     assert "untested" not in block.lower()
