@@ -1,0 +1,142 @@
+{
+  "format_version": 1,
+  "repo_root": "/fixture/superset",
+  "commit": "0000000000000000000000000000000000000000",
+  "profile": "full",
+  "query": "get_guest_rls_filters",
+  "depth": 2,
+  "focus_matches_total": 1,
+  "disambiguation_required": false,
+  "focus": {
+    "name": "get_guest_rls_filters",
+    "qualified_name": "SupersetSecurityManager.get_guest_rls_filters",
+    "kind": "method",
+    "file_path": "superset/security/manager.py",
+    "start_line": 5033,
+    "end_line": 5049,
+    "language": "Python"
+  },
+  "callers": {
+    "total": 2,
+    "direct": 1,
+    "transitive": 1,
+    "entries": [
+      {
+        "endpoint": {
+          "name": "get_guest_rls_filters_str",
+          "qualified_name": "SupersetSecurityManager.get_guest_rls_filters_str",
+          "kind": "method",
+          "file_path": "superset/security/manager.py",
+          "start_line": 5240,
+          "end_line": 5243,
+          "language": "Python"
+        },
+        "relation": "CALLS",
+        "direction": "in",
+        "depth": 1,
+        "call_site": {"file_path": "superset/security/manager.py", "line": 5241}
+      },
+      {
+        "endpoint": {
+          "name": "get_sqla_row_level_filters",
+          "qualified_name": "BaseDatasource.get_sqla_row_level_filters",
+          "kind": "method",
+          "file_path": "superset/connectors/sqla/models.py",
+          "start_line": 891,
+          "end_line": 934,
+          "language": "Python"
+        },
+        "relation": "CALLS",
+        "direction": "in",
+        "depth": 1,
+        "call_site": {"file_path": "superset/connectors/sqla/models.py", "line": 891}
+      }
+    ]
+  },
+  "callees": {"total": 0, "entries": []},
+  "type_consumers": {
+    "total": 1,
+    "entries": [
+      {
+        "endpoint": {
+          "name": "GuestTokenRlsRule",
+          "qualified_name": "GuestTokenRlsRule",
+          "kind": "class",
+          "file_path": "superset/security/guest_token.py",
+          "start_line": 134,
+          "end_line": 140,
+          "language": "Python"
+        },
+        "relation": "RETURNS_TYPE",
+        "direction": "out",
+        "depth": 1
+      }
+    ]
+  },
+  "data_flows": {
+    "total": 1,
+    "entries": [
+      {
+        "endpoint": {
+          "name": "get_rls_cache_key",
+          "qualified_name": "SupersetSecurityManager.get_rls_cache_key",
+          "kind": "method",
+          "file_path": "superset/security/manager.py",
+          "start_line": 5245,
+          "end_line": 5256,
+          "language": "Python"
+        },
+        "relation": "DATA_FLOWS",
+        "direction": "in",
+        "depth": 2
+      }
+    ]
+  },
+  "co_changes": {
+    "total": 1,
+    "entries": [
+      {
+        "endpoint": {
+          "name": "UPDATING.md",
+          "kind": "file",
+          "file_path": "UPDATING.md",
+          "language": "Markdown"
+        },
+        "relation": "FILE_CHANGES_WITH",
+        "detail": "files changed together in 2 recent commits"
+      }
+    ]
+  },
+  "siblings": {"total": 0, "entries": []},
+  "partial_failures": [
+    {
+      "code": "E_PARSE_ERROR",
+      "severity": "warning",
+      "file_path": "superset/connectors/sqla/models.py",
+      "effect_on_semantic_completeness": "file parsed with syntax errors; semantic facts may be incomplete",
+      "detail": "tree-sitter syntax error nodes present: error ERROR at line 889 column 12"
+    },
+    {
+      "code": "E_PARSE_ERROR",
+      "severity": "warning",
+      "file_path": "helm/superset/templates/deployment-worker.yaml",
+      "effect_on_semantic_completeness": "file parsed with syntax errors; semantic facts may be incomplete",
+      "detail": "tree-sitter syntax error nodes present"
+    }
+  ],
+  "stats": {
+    "files": 8592,
+    "parsed_files": 8592,
+    "symbols": 80734,
+    "relations": 287927,
+    "partial_failures": 2,
+    "completeness_level": "degraded"
+  },
+  "completeness_scope": {
+    "language": "Python",
+    "language_files": 2653,
+    "other_language_failures": 1,
+    "other_failure_languages": ["YAML 1"],
+    "level": "degraded"
+  }
+}

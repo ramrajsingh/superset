@@ -40,7 +40,16 @@ The report is a set difference:
 |---|---|
 | Confirmed | The change mentioned it and the graph agrees. |
 | **Silent reach** | Reachable from the change, never mentioned. |
-| **Untested reach** | Reachable, and no `TESTS` edge points at it. |
+| **Unresolved coverage** | Reachable, and the graph found no `TESTS` edge pointing at it. |
+
+Every row in every bucket carries a confidence label, because a graph edge and
+the absence of a graph edge are not the same quality of evidence:
+
+| Label | What it means | Gates `--ci` |
+|---|---|---|
+| `CONFIRMED` | Resolved static relation (`CALLS`, `PARAM_TYPE`, `USES_TYPE`, `RETURNS_TYPE`, `DATA_FLOWS`) whose endpoint file parsed cleanly. | yes |
+| `HEURISTIC` | A `FILE_CHANGES_WITH` co-change edge (commit-history correlation, not code), or any endpoint in a file listed in the graph's own `partial_failures`. | no |
+| `UNVERIFIED` | An **absence**. The graph found nothing, which is not proof that nothing is there. Printed with the exact command that settles it. | no |
 
 ## Architecture and main workflow
 
@@ -51,8 +60,8 @@ python tools/blastradius/blastradius.py --symbol <name> [--ref HEAD] [--ci]
 1. **Reach** — `entire graph impact --symbol S --depth 2 --format json`, reading the `callers`, `type_consumers`, `data_flows` and `co_changes` sections. `callees` is deliberately excluded: those are what the symbol depends on, not what breaks when it changes. Duplicates collapse to the nearest hop so the evidence chain is the shortest one.
 2. **Claim** — `entire checkpoint explain`, falling back to the commit message and file list when no checkpoint is linked. The report states which source it used, because they are not equally strong evidence.
 3. **Bucket** — confirmed vs. silent, matched on symbol name, qualified name and touched file.
-4. **Test selection** — `entire graph neighbors --relation TESTS --direction in` per reachable symbol; symbols with no incoming edge are reported as untested reach.
-5. **Report** — `file:line` on every row so a reviewer can verify it against source. `--ci` exits non-zero on untested reach.
+4. **Test selection** — `entire graph neighbors --relation TESTS --direction in` per reachable symbol. A symbol with no incoming edge is reported as *unresolved coverage*, never as untested: the graph missing an edge and the edge not existing are different facts, and only the second is a coverage gap.
+5. **Report** — `file:line` and a confidence label on every row, so a reviewer can verify it against source. `--ci` exits non-zero only on `CONFIRMED` reach with unresolved coverage.
 
 Claim extraction is deliberately structural — only code-shaped tokens count as a claim — so the tool makes **no model call and needs no network or API key**. That was a design decision, not an omission: a review tool that cannot run offline cannot run in CI.
 
@@ -88,13 +97,108 @@ d1 PARAM_TYPE    Explorable                                          explorables
 
 Grep finds call sites the graph does not report, at `superset/jinja_context.py:297` and `superset/connectors/sqla/models.py:891`. Both reach the function through a module-level `security_manager` singleton, so dynamic dispatch defeats static attribution.
 
-We treated this as the guide instructs — evidence, not an oracle — and it changed the product: the report surfaces the graph's own `partial_failures` (32 files parsed with syntax errors in this repo) as a completeness warning instead of presenting a clean-looking result as fact.
+We treated this as the guide instructs — evidence, not an oracle — and it changed the product: the report surfaces the graph's own `partial_failures` (32 files parsed with syntax errors when first measured, 33 at submission) instead of presenting a clean-looking result as fact. The Curveball then pushed that from a footer down onto the individual row, and turned this specific gap into the standing `UNVERIFIED` note the tool prints on every run.
+
+Re-verified at submission time:
+
+```
+$ grep -rn "get_guest_rls_filters" superset/ --include='*.py'
+superset/jinja_context.py:297:      for rule in security_manager.get_guest_rls_filters(self.table)
+superset/connectors/sqla/models.py:891: for rule in security_manager.get_guest_rls_filters(self):
+```
 
 _TODO: paste the final semantic diff of the submitted implementation before 14:40._
 
 ## Noon Curveball: what changed and how we adapted
 
-_TODO — constraint verbatim, the assumption it attacked, the checkpoint the fresh session was reconstructed from, the impact analysis run before the change, what changed and what stayed, and the test that proves the new behaviour._
+**The card, verbatim:** *"Graph is evidence, not an oracle."* Required: must not
+present incomplete graph relationships as certain; must identify when analysis
+may be partial; must provide a safe fallback or verification path; existing
+behaviour for fully-resolved code must keep working; must include a test or
+fixture representing incomplete analysis.
+
+**The assumption it attacked.** Our report had one voice for every row. A
+`CALLS` edge the graph resolved by reading the source and a `FILE_CHANGES_WITH`
+edge inferred from two commits printed identically, and "no `TESTS` edge" printed
+as *untested reach* — an absence stated as a fact. The tool was already warning
+about `partial_failures` in a footer, which is the honest instinct in the wrong
+place: a global warning does not tell you *which row* to distrust.
+
+**Reconstruction.** Fresh session, no prior context. Recovered from checkpoint
+`01M1TPKG7TYGQCJB01DH20TMF9` (commit `c2ef90b`) via `entire checkpoint explain`,
+which carried the architecture, the decision to gate on coverage rather than on
+reach, and the dynamic-dispatch gap we had already found.
+
+**Impact analysis before the change** — `evidence/impact_graph_impact.json`,
+`evidence/impact_select_tests.json`
+
+```
+entire graph impact --symbol graph_impact --repo . --depth 2 --format json
+entire graph impact --symbol select_tests --repo . --depth 2 --format json
+```
+
+These are the two functions that consume relationship evidence, so they are what
+a confidence change touches. The graph named `main` as the only caller of each,
+and `Reach` / `Symbol` as the type consumers — `select_tests` at depth 1 through
+`RETURNS_TYPE`, `USES_TYPE` and `PARAM_TYPE`. That is what made changing its
+return type from `tuple[dict, list[Symbol]]` to `list[Coverage]` a bounded edit
+rather than a guess: two call sites in `main`, one new type, nothing else.
+
+**What changed**
+
+- `parse_impact()` split out of `graph_impact()` as a pure function, so a saved
+  payload can be replayed without the graph. This is what makes the fixture test
+  possible.
+- `classify_reach()` labels every edge. The `partial_failures` check runs *first*:
+  a `CALLS` edge is only as good as the parse of the file it points into, so an
+  endpoint in an unparsed file is `HEURISTIC` however structural the relation is.
+- `Coverage` carries two independent confidences — how we know the change reaches
+  the symbol, and what we know about tests for it.
+- Absences are worded as absences: *"no TESTS edge found — unresolved, verify
+  manually"*, with `grep -rn <name> tests/` and `pytest -k <name>` printed per row.
+  Downgraded reach rows print their own check: `grep` for a code claim,
+  `git log --oneline -10 -- <file>` for a co-change claim, because a claim about
+  commit history is settled by commit history.
+- The completeness note is scoped to the analysed language instead of totalled.
+  In this repo all 33 parse failures are YAML, TypeScript and JSON while the
+  analysis is Python, so the report says so and downgrades nothing — a global
+  "degraded" banner over a clean Python result would be its own kind of lying.
+- A standing `UNVERIFIED` footer names the dynamic-dispatch gap with its measured
+  case, so the limit ships with the output rather than living in a README.
+
+**What stayed.** Bucketing, ordering, `file:line`, the pytest command, and the
+exit codes are untouched. `test_reach_ordering_and_locations_are_unchanged` and
+`test_a_clean_payload_downgrades_nothing` pin that: with no `partial_failures`,
+every static relation still labels `CONFIRMED` and no completeness note prints.
+
+**The safe fallback.** `--ci` gates only on `CONFIRMED` reach with unresolved
+coverage. Co-change reach, endpoints in unparsed files, and `TESTS` queries that
+errored are reported and never fail a build.
+
+One judgement call worth stating, because the card admits two readings. "No
+`TESTS` edge" is an absence, so it is always `UNVERIFIED`; read strictly, *"never
+gate on UNVERIFIED"* would make `--ci` inert. We key the gate on the **reach**
+confidence — the graph resolved the path from the change to the symbol, and then
+found nothing attached to it — and the gate's own message says exactly that
+rather than claiming those symbols are uncovered. Failing a build on evidence we
+would not defend in review is how a gate gets disabled.
+
+**The test.** `tools/blastradius/test_blastradius.py`, against the saved payload
+`tools/blastradius/fixtures/impact_partial_failures.json`, which contains a
+`CALLS` edge into `superset/connectors/sqla/models.py` while that same file is
+listed in `partial_failures` — the incomplete-analysis case, taken from the real
+shape of `entire graph impact` output.
+
+```
+$ pytest tools/blastradius/test_blastradius.py -q
+............                                                             [100%]
+12 passed
+```
+
+`test_missing_tests_edge_is_reported_as_unresolved_not_as_untested` asserts the
+rendered report contains *"no TESTS edge found — unresolved, verify manually"*
+and that the strings `untested` and `not covered` appear nowhere in it. The
+wording is pinned by a test, not by discipline.
 
 ## Checkpoint links and what each checkpoint proves
 
@@ -137,7 +241,9 @@ Not applicable — we did not opt into the Best Use of Databricks category.
 - Claim extraction is structural, not semantic. A symbol described in prose but never named ("the caching layer") is not credited as claimed, so it can appear as silent reach.
 - Test selection is only as good as the graph's `TESTS` edges; a test that exercises code through a fixture chain may not be attributed.
 - Reach is capped at depth 2, which is the maximum `entire graph impact` accepts.
-- _TODO: what the Curveball added._
+- Confidence is a property of the *edge*, not of the finding's importance. A `HEURISTIC` co-change row can matter more than a `CONFIRMED` type-consumer row; the label says how well we know it, not how much it should worry you.
+- The `partial_failures` downgrade is file-granular. A file that fails to parse at line 12 downgrades every endpoint in it, including symbols the parser read perfectly well.
+- `--ci` gating on `CONFIRMED` reach means a genuine coverage gap reached only through dynamic dispatch will not fail the build. That is the deliberate trade: the gate is quiet where the evidence is weak, and the `UNVERIFIED` rows carry the commands to check it by hand.
 
 **Next steps**
 

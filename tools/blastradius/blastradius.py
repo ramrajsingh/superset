@@ -24,9 +24,15 @@ and what the Entire Graph says it *reaches*, then reports the gap:
     silent     reachable, never mentioned   <- the finding
     overclaim  claimed, absent from the graph
 
-Every row cites file:line so a reviewer can verify it against source. Graph
-output is treated as evidence, not as an oracle: parse failures reported by the
-graph are surfaced rather than swallowed.
+Every row cites file:line so a reviewer can verify it against source, and every
+row carries a confidence label, because the graph is evidence and not an oracle:
+
+    CONFIRMED   a resolved static relation whose endpoint file parsed cleanly
+    HEURISTIC   a statistical co-change edge, or an endpoint in a file the graph
+                failed to parse — real signal, weaker evidence
+    UNVERIFIED  an *absence*. The graph found no edge; that is not proof that no
+                edge exists. Every UNVERIFIED row prints the command that
+                settles it.
 
 Usage:
     python tools/blastradius/blastradius.py --symbol get_guest_rls_filters
@@ -37,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -59,6 +66,30 @@ EDGE_LABELS = {
 # not what breaks when it changes.
 IMPACT_SECTIONS = ("callers", "type_consumers", "data_flows", "co_changes")
 
+CONFIRMED = "CONFIRMED"
+HEURISTIC = "HEURISTIC"
+UNVERIFIED = "UNVERIFIED"
+
+# Relations the graph resolves structurally, by reading the source. ASYNC_CALLS
+# is the async spelling of CALLS and is resolved the same way.
+STRUCTURAL_RELATIONS = frozenset(
+    {"CALLS", "ASYNC_CALLS", "PARAM_TYPE", "USES_TYPE", "RETURNS_TYPE", "DATA_FLOWS"}
+)
+
+# Relations derived from commit history rather than from code. A file that
+# changes alongside another file is a correlation, not a structural fact.
+STATISTICAL_RELATIONS = frozenset({"FILE_CHANGES_WITH"})
+
+# Static attribution cannot follow dispatch through a module-level singleton.
+# This is the case we hit in this repo, kept concrete so the caveat is checkable
+# rather than boilerplate.
+DYNAMIC_DISPATCH_NOTE = (
+    "Calls dispatched through a module-level singleton are not attributed. "
+    "Measured case in this repo: callers of get_guest_rls_filters at "
+    "superset/jinja_context.py:297 and superset/connectors/sqla/models.py:891 "
+    "reach it via the `security_manager` singleton and carry no CALLS edge."
+)
+
 
 @dataclass(frozen=True)
 class Symbol:
@@ -73,16 +104,50 @@ class Symbol:
     def location(self) -> str:
         return f"{self.file_path}:{self.line}"
 
+    @property
+    def short_name(self) -> str:
+        return self.name.rsplit(".", 1)[-1]
+
 
 @dataclass(frozen=True)
 class Reach:
     symbol: Symbol
     distance: int
     relation: str
+    confidence: str = CONFIRMED
+    caveat: str = ""
 
     @property
     def label(self) -> str:
         return EDGE_LABELS.get(self.relation, self.relation.lower())
+
+
+@dataclass(frozen=True)
+class Coverage:
+    """What the graph could say about tests for one reachable symbol."""
+
+    symbol: Symbol
+    reach_confidence: str
+    tests: tuple[str, ...] = ()
+    queried: bool = True  # False when the TESTS query itself failed to answer
+
+    @property
+    def confidence(self) -> str:
+        # A TESTS edge is positive evidence, and inherits the reach's standing.
+        # No edge is an absence, which is never better than UNVERIFIED.
+        if self.tests:
+            return CONFIRMED if self.reach_confidence == CONFIRMED else HEURISTIC
+        return UNVERIFIED
+
+
+@dataclass
+class Impact:
+    """Parsed `entire graph impact` output, with its own completeness caveats."""
+
+    reach: list[Reach] = field(default_factory=list)
+    partial_files: frozenset[str] = frozenset()
+    warnings: list[str] = field(default_factory=list)
+    scope: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -134,45 +199,80 @@ def parse_symbol(raw: dict[str, Any]) -> Symbol:
     )
 
 
-def graph_impact(symbol: str, repo: str, depth: int) -> tuple[list[Reach], list[str]]:
-    """One-shot blast radius. Returns (reach, warnings-about-completeness)."""
-    payload = run_json(
-        [
-            "entire", "graph", "impact",
-            "--symbol", symbol,
-            "--repo", repo,
-            "--depth", str(min(depth, 2)),
-            "--format", "json",
-        ]
-    )
+def classify_reach(relation: str, file_path: str, partial_files: frozenset[str]) -> tuple[str, str]:
+    """Confidence for one edge, and the reason when it is not CONFIRMED.
+
+    The partial-parse check comes first on purpose: a CALLS edge is only as good
+    as the parse of the file it points into, so an endpoint the graph could not
+    read cleanly is downgraded no matter how structural the relation looks.
+    """
+    if file_path in partial_files:
+        return HEURISTIC, "endpoint is in a file the graph parsed with errors"
+    if relation in STRUCTURAL_RELATIONS:
+        return CONFIRMED, ""
+    if relation in STATISTICAL_RELATIONS:
+        return HEURISTIC, "co-change is a commit-history correlation, not a code relation"
+    return HEURISTIC, f"{relation} is not a resolved static relation"
+
+
+def parse_impact(payload: Any) -> Impact:
+    """Turn one `entire graph impact` payload into labelled reach.
+
+    Pure, so a saved payload — including one with partial_failures — can be
+    replayed in a test without the graph.
+    """
     if not isinstance(payload, dict):
         raise GraphError("impact returned no object")
 
-    reach: list[Reach] = []
+    failures = [f for f in payload.get("partial_failures", []) if isinstance(f, dict)]
+    partial_files = frozenset(str(f.get("file_path")) for f in failures if f.get("file_path"))
+
     seen: dict[str, Reach] = {}
     for section in IMPACT_SECTIONS:
         for entry in (payload.get(section) or {}).get("entries", []):
             endpoint = entry.get("endpoint")
             if not isinstance(endpoint, dict):
                 continue
+            symbol = parse_symbol(endpoint)
+            relation = str(entry.get("relation") or "UNKNOWN")
+            confidence, caveat = classify_reach(relation, symbol.file_path, partial_files)
             hop = Reach(
-                symbol=parse_symbol(endpoint),
+                symbol=symbol,
                 distance=int(entry.get("depth") or 1),
-                relation=str(entry.get("relation") or "UNKNOWN"),
+                relation=relation,
+                confidence=confidence,
+                caveat=caveat,
             )
             # Nearest origin wins, so the evidence chain is the shortest one.
             key = f"{hop.symbol.location}:{hop.symbol.name}"
             if key not in seen or hop.distance < seen[key].distance:
                 seen[key] = hop
-    reach = sorted(seen.values(), key=lambda r: (r.distance, r.symbol.location))
 
-    # "Graph results are evidence, not an oracle" — surface what it could not parse.
     warnings = [
-        f"{f.get('file_path')}: {f.get('effect_on_semantic_completeness')}"
-        for f in payload.get("partial_failures", [])
-        if isinstance(f, dict)
+        f"{f.get('file_path')}: {f.get('effect_on_semantic_completeness')}" for f in failures
     ]
-    return reach, warnings
+    scope = payload.get("completeness_scope")
+    return Impact(
+        reach=sorted(seen.values(), key=lambda r: (r.distance, r.symbol.location)),
+        partial_files=partial_files,
+        warnings=warnings,
+        scope=scope if isinstance(scope, dict) else {},
+    )
+
+
+def graph_impact(symbol: str, repo: str, depth: int) -> Impact:
+    """One-shot blast radius, with the graph's own completeness caveats kept."""
+    return parse_impact(
+        run_json(
+            [
+                "entire", "graph", "impact",
+                "--symbol", symbol,
+                "--repo", repo,
+                "--depth", str(min(depth, 2)),
+                "--format", "json",
+            ]
+        )
+    )
 
 
 def load_claim(ref: str, repo: str) -> Claim:
@@ -222,20 +322,22 @@ def claimed_names(text: str) -> set[str]:
     return names
 
 
-def select_tests(reach: list[Reach], repo: str) -> tuple[dict[str, list[str]], list[Symbol]]:
-    """The minimal test set for this blast radius.
+def select_tests(reach: list[Reach], repo: str) -> list[Coverage]:
+    """What the graph can say about tests for each reachable symbol.
 
-    Asks the graph for TESTS edges pointing at each reachable symbol, which is
-    real evidence rather than a filename heuristic. Symbols with no incoming
-    TESTS edge are returned separately: untested reach is the most actionable
-    line in the report, because it is where a regression would land silently.
+    Asks for TESTS edges pointing at the symbol, which is real evidence rather
+    than a filename heuristic. A symbol with no incoming edge is *not* reported
+    as untested — the graph missing an edge and the edge not existing are
+    different things, and only the second one is a coverage gap. Those rows come
+    back UNVERIFIED, with the command that settles them.
     """
-    covered: dict[str, list[str]] = {}
-    uncovered: list[Symbol] = []
+    coverages: list[Coverage] = []
 
     for hop in reach:
         if hop.symbol.file_path.startswith("tests/"):
             continue  # a test is not something a test needs to cover
+        if hop.symbol.kind == "file":
+            continue  # a co-changed file is not a symbol a TESTS edge can point at
         try:
             payload = run_json(
                 [
@@ -249,6 +351,9 @@ def select_tests(reach: list[Reach], repo: str) -> tuple[dict[str, list[str]], l
                 timeout=120,
             )
         except GraphError:
+            # The query itself failed, so we know nothing either way. Keep the
+            # row so the reviewer sees the hole instead of a shorter report.
+            coverages.append(Coverage(hop.symbol, hop.confidence, (), queried=False))
             continue
 
         tests: list[str] = []
@@ -263,17 +368,52 @@ def select_tests(reach: list[Reach], repo: str) -> tuple[dict[str, list[str]], l
                 if path:
                     tests.append(str(path))
 
-        if tests:
-            covered[hop.symbol.name] = sorted(set(tests))
-        else:
-            uncovered.append(hop.symbol)
+        coverages.append(Coverage(hop.symbol, hop.confidence, tuple(sorted(set(tests)))))
 
-    return covered, uncovered
+    return coverages
 
 
-def test_command(covered: dict[str, list[str]], reach: list[Reach]) -> str | None:
+def gating_rows(coverages: list[Coverage]) -> list[Coverage]:
+    """Rows `--ci` is allowed to fail on.
+
+    The gate keys off the *reach* confidence: we act only where the graph
+    resolved the path from the change to the symbol structurally, and then
+    found no test attached to it. Reach we could not resolve — a co-change
+    edge, an endpoint in an unparsed file, a TESTS query that errored — is
+    reported and never gated, because failing a build on evidence we would not
+    defend teaches people to ignore the gate.
+    """
+    return [
+        c for c in coverages if c.reach_confidence == CONFIRMED and not c.tests and c.queried
+    ]
+
+
+def coverage_verify(symbol: Symbol) -> list[str]:
+    """The two commands that settle an UNVERIFIED coverage row."""
+    # A file node has no dotted qualification to strip; splitting one would grep
+    # for its extension.
+    name = shlex.quote(symbol.name if symbol.kind == "file" else symbol.short_name)
+    return [f"grep -rn {name} tests/", f"pytest -k {name}"]
+
+
+def grep_command(name: str) -> str:
+    return f"grep -rn {shlex.quote(name)} --include='*.py' ."
+
+
+def reach_verify(hop: Reach) -> str:
+    """The command that settles a HEURISTIC reach row.
+
+    A co-change edge is a claim about commit history, so history is what checks
+    it; every other downgraded edge is a claim about code, so grep checks it.
+    """
+    if hop.relation in STATISTICAL_RELATIONS or hop.symbol.kind == "file":
+        return f"git log --oneline -10 -- {shlex.quote(hop.symbol.file_path)}"
+    return grep_command(hop.symbol.short_name)
+
+
+def test_command(coverages: list[Coverage], reach: list[Reach]) -> str | None:
     """The pytest invocation a CI job should run for this change."""
-    paths = {path for paths in covered.values() for path in paths}
+    paths = {path for c in coverages for path in c.tests}
     # Test files that co-change with the touched code are weaker evidence than a
     # TESTS edge, but they are still a better guess than running the whole suite.
     paths |= {r.symbol.file_path for r in reach if r.symbol.file_path.startswith("tests/")}
@@ -282,22 +422,66 @@ def test_command(covered: dict[str, list[str]], reach: list[Reach]) -> str | Non
 
 def bucket(claim: Claim, reach: list[Reach]) -> tuple[list[Reach], list[Reach]]:
     """confirmed = claimed and reachable; silent = reachable and unmentioned."""
-    confirmed, silent = [], []
+    confirmed: list[Reach] = []
+    silent: list[Reach] = []
     for hop in reach:
-        short = hop.symbol.name.rsplit(".", 1)[-1]
         mentioned = (
             hop.symbol.name in claim.names
-            or short in claim.names
+            or hop.symbol.short_name in claim.names
             or hop.symbol.file_path in claim.files
         )
         (confirmed if mentioned else silent).append(hop)
     return confirmed, silent
 
 
-def report(symbol: str, claim: Claim, confirmed: list[Reach], silent: list[Reach],
-           warnings: list[str], covered: dict[str, list[str]] | None = None,
-           uncovered: list[Symbol] | None = None, command: str | None = None) -> str:
+def tag(confidence: str) -> str:
+    return f"[{confidence:<10}]"
+
+
+def completeness_lines(impact: Impact) -> list[str]:
+    """What the graph admits it could not read, scoped to the language analysed."""
+    if not impact.warnings:
+        return []
+    scope = impact.scope
+    language = str(scope.get("language") or "")
+    elsewhere = int(scope.get("other_language_failures") or 0)
+    in_language = len(impact.warnings) - elsewhere
+
+    out = [f"Graph completeness: {len(impact.warnings)} file(s) parsed with errors."]
+    if language:
+        others = ", ".join(str(x) for x in scope.get("other_failure_languages") or [])
+        out.append(
+            f"  {in_language} in {language} (the analysed language)"
+            + (f"; {elsewhere} elsewhere ({others})" if elsewhere else "")
+        )
+        if in_language <= 0:
+            out.append(
+                f"  No {language} file failed to parse, so no row above was downgraded for it."
+            )
+    out += [f"  ~ {line}" for line in impact.warnings[:3]]
+    if len(impact.warnings) > 3:
+        out.append(f"  ~ ... and {len(impact.warnings) - 3} more")
+    return out
+
+
+def report(
+    symbol: str,
+    claim: Claim,
+    confirmed: list[Reach],
+    silent: list[Reach],
+    impact: Impact,
+    coverages: list[Coverage] | None = None,
+    command: str | None = None,
+) -> str:
     out = [f"\nblastradius  {symbol}", ""]
+    out += [
+        "Confidence  CONFIRMED  resolved static relation, endpoint file parsed cleanly",
+        "            HEURISTIC  co-change, or endpoint in a file the graph could not parse",
+        "            UNVERIFIED an absence — the graph found nothing, which is not proof",
+        "                       that nothing is there. Verify command printed per row.",
+        "",
+    ]
+
     if claim.summary:
         out += [f"The change said (from {claim.source}):", ""]
         out += [f"    {line}" for line in claim.summary.splitlines() if line.strip()]
@@ -308,40 +492,70 @@ def report(symbol: str, claim: Claim, confirmed: list[Reach], silent: list[Reach
         width = max(len(r.symbol.location) for r in silent)
         for hop in silent:
             out.append(
-                f"  ! {hop.symbol.location.ljust(width)}  {hop.symbol.name}"
-                f"  [{hop.distance} hop, {hop.label}]"
+                f"  ! {tag(hop.confidence)} {hop.symbol.location.ljust(width)}  "
+                f"{hop.symbol.name}  [{hop.distance} hop, {hop.label}]"
             )
+            if hop.confidence != CONFIRMED:
+                out.append(f"        {hop.caveat}; confirm with:")
+                out.append(f"        {reach_verify(hop)}")
     else:
-        out.append("Nothing reachable that the change did not mention.")
+        out.append(
+            "No reachable symbol went unmentioned in what the graph resolved "
+            f"{tag(UNVERIFIED)}"
+        )
+        out.append("  — an edge the graph did not resolve would not appear here either.")
     out.append("")
 
     if confirmed:
         out.append(f"{len(confirmed)} reachable and accounted for:")
         for hop in confirmed:
-            out.append(f"  . {hop.symbol.location}  {hop.symbol.name}")
+            out.append(
+                f"  . {tag(hop.confidence)} {hop.symbol.location}  {hop.symbol.name}"
+            )
         out.append("")
 
-    if uncovered:
-        out.append(f"{len(uncovered)} reachable with no test covering them:")
-        for sym in uncovered:
-            out.append(f"  x {sym.location}  {sym.name}")
-        out.append("")
+    if coverages is not None:
+        unresolved = [c for c in coverages if not c.tests]
+        covered = [c for c in coverages if c.tests]
+        gated = gating_rows(coverages)
+        if covered:
+            out.append(f"{len(covered)} reachable symbol(s) with a TESTS edge:")
+            for c in covered:
+                out.append(f"  . {tag(c.confidence)} {c.symbol.location}  {c.symbol.name}")
+            out.append("")
+        if unresolved:
+            out.append(
+                f"{len(unresolved)} reachable symbol(s) with no TESTS edge found — "
+                "unresolved, verify manually:"
+            )
+            for c in unresolved:
+                gate = " (gates --ci)" if c in gated else ""
+                out.append(
+                    f"  ? {tag(c.confidence)} {c.symbol.location}  {c.symbol.name}"
+                    f"  [reach {c.reach_confidence}]{gate}"
+                )
+                if not c.queried:
+                    out.append("        the TESTS query itself failed; nothing is known here")
+                for line in coverage_verify(c.symbol):
+                    out.append(f"        {line}")
+            out.append("")
 
     if command:
-        covered_count = len(covered or {})
         out += [
-            f"Run these tests ({covered_count} reachable symbol(s) covered by a TESTS edge):",
+            "Run these tests (from TESTS edges, plus test files that co-change):",
             "",
             f"    {command}",
             "",
         ]
 
-    if warnings:
-        out.append(f"Graph completeness: {len(warnings)} file(s) parsed with errors;")
-        out.append("findings below may be incomplete. Verify against source.")
-        for line in warnings[:3]:
-            out.append(f"  ~ {line}")
-        out.append("")
+    out += [
+        f"Absence of evidence {tag(UNVERIFIED)}",
+        f"  {DYNAMIC_DISPATCH_NOTE}",
+        f"  Check this run against source: {grep_command(symbol)}",
+        "",
+    ]
+
+    out += completeness_lines(impact)
     return "\n".join(out)
 
 
@@ -355,30 +569,42 @@ def main(argv: list[str] | None = None) -> int:
         "--no-tests", action="store_true", help="skip test selection (faster)"
     )
     parser.add_argument(
-        "--ci", action="store_true", help="exit non-zero on reach no test covers"
+        "--ci",
+        action="store_true",
+        help="exit non-zero on CONFIRMED reach with no TESTS edge found",
     )
     args = parser.parse_args(argv)
 
     try:
-        reach, warnings = graph_impact(args.symbol, args.repo, args.depth)
+        impact = graph_impact(args.symbol, args.repo, args.depth)
     except GraphError as exc:
         print(f"blastradius: {exc}", file=sys.stderr)
         return 2
 
     claim = load_claim(args.ref, args.repo)
-    confirmed, silent = bucket(claim, reach)
+    confirmed, silent = bucket(claim, impact.reach)
 
-    covered: dict[str, list[str]] = {}
-    uncovered: list[Symbol] = []
+    coverages: list[Coverage] | None = None
     command: str | None = None
     if not args.no_tests:
-        covered, uncovered = select_tests(reach, args.repo)
-        command = test_command(covered, reach)
+        coverages = select_tests(impact.reach, args.repo)
+        command = test_command(coverages, impact.reach)
 
-    print(report(args.symbol, claim, confirmed, silent, warnings, covered, uncovered, command))
+    print(report(args.symbol, claim, confirmed, silent, impact, coverages, command))
+
     if args.ci:
-        # A CI gate fails on reach that no test can catch, not on reach itself.
-        return 1 if uncovered else 0
+        # The gate fires on reach the graph resolved structurally and found no
+        # test for. Reach we could not resolve is reported, never gated.
+        gated = gating_rows(coverages or [])
+        if gated:
+            print(
+                f"blastradius: {len(gated)} symbol(s) with CONFIRMED reach and no TESTS "
+                "edge found. Gate keyed on reach confidence, not on a claim that these "
+                "symbols are uncovered — verify with the commands above.",
+                file=sys.stderr,
+            )
+            return 1
+        return 0
     return 1 if silent else 0
 
 
