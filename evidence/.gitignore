@@ -1,0 +1,2 @@
+# Zero-byte stderr captures from background graph runs, not evidence.
+*.err
