@@ -1,0 +1,91 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TQ7JBK9Q9GZNCM9K4NC1AK",
+  "session_id": "27797c3c-f71c-4619-a9d1-33465e758587",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T06:41:58.713713Z",
+  "branch": "blastradius",
+  "checkpoints_count": 4,
+  "save_step_count": 1,
+  "files_touched": [
+    "evidence/03-with-test-selection.txt"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-5",
+  "turn_id": "b1f257a21502",
+  "checkpoint_transcript_start": 1116,
+  "transcript_lines_at_start": 1116,
+  "compact_transcript_start": 232,
+  "token_usage": {
+    "input_tokens": 34,
+    "cache_creation_tokens": 12698,
+    "cache_read_tokens": 6866440,
+    "output_tokens": 11505,
+    "api_call_count": 17
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01N9tY51QZPEQdPx9DAEMj4y",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "artifact-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "cd072d8af165",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 90,
+        "end": 91,
+        "entry_ids": [
+          "967b991a-5337-4124-ba46-54102b45b661"
+        ],
+        "tool_use_id": "toolu_01N9tY51QZPEQdPx9DAEMj4y"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01N9tY51QZPEQdPx9DAEMj4y"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: artifact-design",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T06:41:58.495776Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 19,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 19,
+    "total_lines_changed": 25,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

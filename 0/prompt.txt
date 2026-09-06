@@ -1,0 +1,143 @@
+show me the test selection output when it's done
+
+---
+
+12:00 : The Noon Curveball is live. Stop, checkpoint, restart your agent.
+
+Teams,
+
+The Noon Curveball is now live. A new constraint has been introduced for every track.
+
+Before you change any code:
+1. Stop implementation.
+
+2. Commit your last stable version.
+
+3. Confirm Entire created a Checkpoint (`entire status`).
+
+4. End your current agent session.
+
+5. Read your track's card below.
+
+6. Start a FRESH agent session.
+
+7. Use your pre-curveball Checkpoint to reconstruct your intent, architecture, completed work, and open risks in that new session.
+
+8. Run Entire Graph impact analysis BEFORE editing.
+
+9. Implement and test the new requirement.
+
+10. Create a final Checkpoint explaining your revised design.
+
+Update your implementation, add appropriate tests, and preserve existing working behaviour.
+
+Your final submission must explain what assumption changed, how your design changed, and why the new result is safe.
+
+ 
+
+
+
+
+
+
+
+
+TRACK 1: PRIVACY BOUNDARY
+Your Checkpoint-native experience must now work with sensitive repositories.
+
+The security team has introduced these requirements:
+
+·       Raw prompts and transcripts must not be sent to a new external service.
+
+·       The product must continue to provide useful output when sensitive fields are redacted or unavailable.
+
+·       Existing local functionality must continue to work.
+
+·       The interface must clearly distinguish between complete and incomplete context.
+
+·       You must include at least one test using redacted or missing Checkpoint data.
+
+Use Entire Graph to identify every code path affected by this privacy boundary.
+
+Your product must never present incomplete context as a complete or authoritative result.
+
+A redacted Checkpoint fixture is attached.
+
+ 
+
+TRACK 2: GRAPH IS EVIDENCE, NOT AN ORACLE
+Your Graph-powered experience has encountered a repository using dynamic dispatch, generated code, reflection, or another pattern that static analysis cannot fully resolve.
+
+The new requirements:
+
+·       The product must not present incomplete Graph relationships as certain.
+
+·       It must identify when analysis may be partial.
+
+·       It must provide a safe fallback or verification path.
+
+·       Existing behaviour for fully resolved code must continue to work.
+
+·       You must include a test or fixture representing incomplete analysis.
+
+Use Entire Graph to identify which parts of your implementation consume relationship, impact, or semantic diff evidence.
+
+Users and agents must be able to tell apart:
+
+·       Confirmed structural evidence
+
+·       Heuristic or incomplete evidence
+
+·       Claims that require source or test verification
+
+A partial analysis repository fixture is attached.
+
+ 
+
+TRACK 3: THE AGENT CHANGED ITS FORMAT
+The agent or workflow you integrated has released a new transcript and lifecycle event format. Existing users still produce the original format.
+
+The new requirements:
+
+·       The integration must support both the original and the new format.
+
+·       Unknown events must not crash the integration.
+
+·       An incomplete transcript must produce a partial result, not a corrupted or discarded session.
+
+·       Existing Checkpoint behaviour must remain compatible.
+
+Tests must cover:
+
+·       Original format
+
+·       New format
+
+·       Unknown events
+
+·       Incomplete input
+
+Use Entire Graph to identify every parser, lifecycle handler, summary path, and Checkpoint writing path affected.
+
+Do not duplicate the entire implementation for each format.
+
+A JSONL fixture representing the new format is attached. Check with your mentor that you have the one matching your integration.
+
+---
+
+(base) apple@Meenakshis-MacBook-Pro superset % git push origin
+Enumerating objects: 28, done.
+Counting objects: 100% (28/28), done.
+Delta compression using up to 12 threads
+Compressing objects: 100% (22/22), done.
+Writing objects: 100% (28/28), 27.09 KiB | 6.77 MiB/s, done.
+Total 28 (delta 5), reused 0 (delta 0), pack-reused 0 (from 0)
+To entire://aws-ap-south-1.entire.io/gh/ramrajsingh/superset
+ ! [remote rejected]       master -> master (protected branch)
+error: failed to push some refs to 'entire://aws-ap-south-1.entire.io/gh/ramrajsingh/superset'
+fatal: send-pack exited with error: exit status 1
+(base) apple@Meenakshis-MacBook-Pro superset %
+
+---
+
+update the BUILDATHON.md with the branch and push
