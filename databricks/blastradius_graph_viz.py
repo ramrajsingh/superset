@@ -37,7 +37,20 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("data_path", "file:/Workspace/Shared/blastradius/data", "CSV folder")
+def _default_data_path() -> str:
+    """Look for `data/` next to this notebook, wherever it was imported.
+
+    Hardcoding an absolute path would work for exactly one workspace and one
+    user, and would fail quietly into the embedded copy for everybody else.
+    """
+    try:
+        ctx = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
+        return "file:/Workspace" + ctx.notebookPath().get().rsplit("/", 1)[0] + "/data"
+    except Exception:  # noqa: BLE001 - not every runtime exposes the context
+        return "file:/Workspace/Shared/blastradius/data"
+
+
+dbutils.widgets.text("data_path", _default_data_path(), "CSV folder")
 DATA = dbutils.widgets.get("data_path").rstrip("/")
 print(f"reading from {DATA}")
 
