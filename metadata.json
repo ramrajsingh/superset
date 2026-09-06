@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TYTSDZ38DC8MCFTYQ2TYNR",
+  "strategy": "manual-commit",
+  "branch": "blastradius",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "BUILDATHON.md",
+    "evidence/04-semantic-diff.json",
+    "evidence/05-live-mermaid.md",
+    "evidence/rendered/blast-radius.svg",
+    "evidence/rendered/escape-regression-BEFORE-fix.svg",
+    "evidence/rendered/escape-regression.svg",
+    "evidence/rendered/truncation.svg",
+    "tools/blastradius/blastradius.py",
+    "tools/blastradius/test_blastradius.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 224,
+    "cache_creation_tokens": 224959,
+    "cache_read_tokens": 19675766,
+    "output_tokens": 117008,
+    "api_call_count": 112
+  }
+}
