@@ -80,6 +80,34 @@ STRUCTURAL_RELATIONS = frozenset(
 # changes alongside another file is a correlation, not a structural fact.
 STATISTICAL_RELATIONS = frozenset({"FILE_CHANGES_WITH"})
 
+# A diagram past this many nodes stops being readable, and an unreadable
+# picture is a worse failure than a table.
+MERMAID_MAX_NODES = 40
+
+# Stroke-only styling, no fills: the diagram is embedded in Markdown that may be
+# rendered on a light or a dark background, and mermaid supplies the fill.
+MERMAID_CLASSDEFS = (
+    "classDef focusnode stroke:#58a6ff,stroke-width:3px",
+    "classDef covered stroke:#3fb950,stroke-width:2px",
+    "classDef unresolved stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4",
+    "classDef nocoverage stroke:#8b949e,stroke-width:1px",
+    "classDef tests stroke:#bc8cff,stroke-width:2px",
+)
+
+MERMAID_LEGEND = (
+    "**Arrow** — how we know the change reaches it: "
+    "`==>` CONFIRMED (resolved static relation) · "
+    "`-.->` HEURISTIC (co-change, or an endpoint in a file the graph could not parse).",
+    "**Node border** — what we know about tests: "
+    "solid green a TESTS edge was found · "
+    "dashed grey no TESTS edge found (unresolved, not a claim of no coverage) · "
+    "thin grey coverage not evaluated.",
+    "A test file reached by a `TESTS` edge is drawn as a test node (purple). A "
+    "test file that merely *co-changes* with the touched code is drawn as a "
+    "co-change node, because that is the weaker claim.",
+)
+
+
 # Static attribution cannot follow dispatch through a module-level singleton.
 # This is the case we hit in this repo, kept concrete so the caveat is checkable
 # rather than boilerplate.
@@ -107,6 +135,17 @@ class Symbol:
     @property
     def short_name(self) -> str:
         return self.name.rsplit(".", 1)[-1]
+
+    @property
+    def display_name(self) -> str:
+        """How to name this node to a human.
+
+        A file node has no dotted qualification to strip — splitting one would
+        leave its extension, so `UPDATING.md` would read as `md`.
+        """
+        if self.kind == "file":
+            return self.file_path.rsplit("/", 1)[-1] or self.name
+        return self.short_name
 
 
 @dataclass(frozen=True)
@@ -392,7 +431,7 @@ def coverage_verify(symbol: Symbol) -> list[str]:
     """The two commands that settle an UNVERIFIED coverage row."""
     # A file node has no dotted qualification to strip; splitting one would grep
     # for its extension.
-    name = shlex.quote(symbol.name if symbol.kind == "file" else symbol.short_name)
+    name = shlex.quote(symbol.display_name)
     return [f"grep -rn {name} tests/", f"pytest -k {name}"]
 
 
@@ -418,6 +457,93 @@ def test_command(coverages: list[Coverage], reach: list[Reach]) -> str | None:
     # TESTS edge, but they are still a better guess than running the whole suite.
     paths |= {r.symbol.file_path for r in reach if r.symbol.file_path.startswith("tests/")}
     return f"pytest {' '.join(sorted(paths))}" if paths else None
+
+
+def mermaid_escape(text: str) -> str:
+    """Mermaid label text. `#` first: the entity escapes we emit start with one."""
+    return text.replace("#", "#35;").replace('"', "#quot;").replace("\n", " ")
+
+
+def mermaid_node(node_id: str, symbol: Symbol, shape: str = "square") -> str:
+    """A node whose label carries file:line, so the picture stays checkable."""
+    label = mermaid_escape(symbol.display_name)
+    detail = symbol.location if symbol.line else symbol.file_path
+    if detail not in ("", "<unknown>", symbol.display_name):
+        label += f"<br/>{mermaid_escape(detail)}"
+    open_, close = {
+        "focus": ("((", "))"),
+        "file": ("{{", "}}"),
+        "test": ("[/", "/]"),
+        "square": ("[", "]"),
+    }[shape]
+    return f'    {node_id}{open_}"{label}"{close}'
+
+
+def mermaid(
+    symbol: str,
+    impact: Impact,
+    coverages: list[Coverage] | None = None,
+    max_nodes: int = MERMAID_MAX_NODES,
+) -> str:
+    """The blast radius as a mermaid flowchart.
+
+    Two independent visual channels, so the confidence model survives the
+    translation into a picture: the *arrow* says how well we know the change
+    reaches a symbol, and the *node border* says what we know about tests for
+    it. Neither is allowed to imply the other.
+
+    Pure — it renders a parsed payload and never queries the graph.
+    """
+    by_location = {c.symbol.location: c for c in coverages or []}
+    shown = impact.reach[:max_nodes]
+
+    lines = ["graph LR"]
+    lines += [f"    {d}" for d in MERMAID_CLASSDEFS]
+    lines.append("")
+    lines.append(mermaid_node("focus", Symbol(symbol, "", 0), "focus") + ":::focusnode")
+
+    test_ids: dict[str, str] = {}
+    edges: list[str] = []
+    for index, hop in enumerate(shown):
+        node_id = f"n{index}"
+        shape = "file" if hop.symbol.kind == "file" else "square"
+
+        coverage = by_location.get(hop.symbol.location)
+        if coverage is None:
+            css = "nocoverage"
+        elif coverage.tests:
+            css = "covered"
+        else:
+            css = "unresolved"
+
+        lines.append(mermaid_node(node_id, hop.symbol, shape) + f":::{css}")
+        arrow = "==>" if hop.confidence == CONFIRMED else "-.->"
+        edges.append(f"    focus {arrow}|{mermaid_escape(hop.label)}| {node_id}")
+
+        for path in coverage.tests if coverage else ():
+            if path not in test_ids:
+                test_ids[path] = f"t{len(test_ids)}"
+                lines.append(
+                    mermaid_node(test_ids[path], Symbol(path, path, 0, "file"), "test")
+                    + ":::tests"
+                )
+            edges.append(f"    {test_ids[path]} -->|TESTS| {node_id}")
+
+    omitted = len(impact.reach) - len(shown)
+    if omitted > 0:
+        lines.append(f'    more["… {omitted} more reachable, not drawn"]:::nocoverage')
+        edges.append("    focus -.->|truncated| more")
+
+    return "\n".join(lines + [""] + edges)
+
+
+def mermaid_block(symbol: str, impact: Impact, coverages: list[Coverage] | None = None) -> str:
+    """The fenced diagram plus its legend, ready to paste into Markdown."""
+    return "\n".join(
+        [f"```mermaid", mermaid(symbol, impact, coverages), "```", ""]
+        + [f"- {line}" for line in MERMAID_LEGEND]
+        + [""]
+    )
 
 
 def bucket(claim: Claim, reach: list[Reach]) -> tuple[list[Reach], list[Reach]]:
@@ -569,6 +695,18 @@ def main(argv: list[str] | None = None) -> int:
         "--no-tests", action="store_true", help="skip test selection (faster)"
     )
     parser.add_argument(
+        "--from-json",
+        metavar="PATH",
+        help="replay a saved `entire graph impact` payload instead of querying "
+             "the graph; with --no-tests this makes the whole run offline",
+    )
+    parser.add_argument(
+        "--mermaid",
+        action="store_true",
+        help="emit the blast radius as a fenced mermaid diagram instead of the "
+             "text report (exit codes are unchanged)",
+    )
+    parser.add_argument(
         "--ci",
         action="store_true",
         help="exit non-zero on CONFIRMED reach with no TESTS edge found",
@@ -576,8 +714,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        impact = graph_impact(args.symbol, args.repo, args.depth)
-    except GraphError as exc:
+        if args.from_json:
+            with open(args.from_json, encoding="utf-8") as handle:
+                impact = parse_impact(json.load(handle))
+        else:
+            impact = graph_impact(args.symbol, args.repo, args.depth)
+    except (GraphError, OSError, json.JSONDecodeError) as exc:
         print(f"blastradius: {exc}", file=sys.stderr)
         return 2
 
@@ -590,7 +732,10 @@ def main(argv: list[str] | None = None) -> int:
         coverages = select_tests(impact.reach, args.repo)
         command = test_command(coverages, impact.reach)
 
-    print(report(args.symbol, claim, confirmed, silent, impact, coverages, command))
+    if args.mermaid:
+        print(mermaid_block(args.symbol, impact, coverages))
+    else:
+        print(report(args.symbol, claim, confirmed, silent, impact, coverages, command))
 
     if args.ci:
         # The gate fires on reach the graph resolved structurally and found no

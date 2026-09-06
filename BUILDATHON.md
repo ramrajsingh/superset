@@ -6,7 +6,7 @@
 | Fork | `github.com/ramrajsingh/superset` |
 | Branch | **`blastradius`** — `master` is protected on the fork, so all work lands here |
 | Entire mirror | `entire://aws-ap-south-1.entire.io/gh/ramrajsingh/superset` (India region) |
-| Final commit | _TODO: update after the Curveball work lands_ |
+| Final commit | tip of `blastradius` — `git log -1 --oneline blastradius` (a commit cannot contain its own hash) |
 | Implementation | `tools/blastradius/blastradius.py` |
 | Graph evidence | `evidence/` |
 
@@ -63,6 +63,59 @@ python tools/blastradius/blastradius.py --symbol <name> [--ref HEAD] [--ci]
 4. **Test selection** — `entire graph neighbors --relation TESTS --direction in` per reachable symbol. A symbol with no incoming edge is reported as *unresolved coverage*, never as untested: the graph missing an edge and the edge not existing are different facts, and only the second is a coverage gap.
 5. **Report** — `file:line` and a confidence label on every row, so a reviewer can verify it against source. `--ci` exits non-zero only on `CONFIRMED` reach with unresolved coverage.
 
+### The blast radius as a picture
+
+`--mermaid` renders the same analysis as a diagram, with the confidence model
+carried by two independent visual channels so neither can imply the other: the
+**arrow** says how well we know the change reaches a symbol, the **node border**
+says what we know about tests for it. This is the real run against
+`get_guest_rls_filters`:
+
+```mermaid
+graph LR
+    classDef focusnode stroke:#58a6ff,stroke-width:3px
+    classDef covered stroke:#3fb950,stroke-width:2px
+    classDef unresolved stroke:#8b949e,stroke-width:2px,stroke-dasharray:3 4
+    classDef nocoverage stroke:#8b949e,stroke-width:1px
+    classDef tests stroke:#bc8cff,stroke-width:2px
+
+    focus(("get_guest_rls_filters")):::focusnode
+    n0{{"UPDATING.md"}}:::nocoverage
+    n1["BaseDatasource<br/>superset/connectors/sqla/models.py:184"]:::unresolved
+    n2["Explorable<br/>superset/explorables/base.py:181"]:::unresolved
+    n3["GuestTokenRlsRule<br/>superset/security/guest_token.py:134"]:::unresolved
+    n4["SupersetSecurityManager<br/>superset/security/manager.py:1738"]:::unresolved
+    n5["get_guest_rls_filters_str<br/>superset/security/manager.py:5240"]:::unresolved
+    n6{{"manager_test.py<br/>tests/unit_tests/security/manager_test.py"}}:::nocoverage
+    n7["get_rls_cache_key<br/>superset/security/manager.py:5245"]:::unresolved
+
+    focus -.->|co-change| n0
+    focus ==>|type consumer| n1
+    focus ==>|type consumer| n2
+    focus ==>|type consumer| n3
+    focus ==>|call| n4
+    focus ==>|call| n5
+    focus -.->|co-change| n6
+    focus ==>|call| n7
+```
+
+- **Arrow** — `==>` CONFIRMED (resolved static relation) · `-.->` HEURISTIC (co-change, or an endpoint in a file the graph could not parse).
+- **Node border** — solid green a `TESTS` edge was found · dashed grey no `TESTS` edge found (unresolved, *not* a claim of no coverage) · thin grey coverage not evaluated.
+- A test file reached by a `TESTS` edge is drawn as a test node. A test file that merely *co-changes* with the touched code is drawn as a co-change node, because that is the weaker claim — `manager_test.py` above is the second kind, and the picture says so.
+
+Node labels carry `file:line`, so the diagram stays as checkable as the table.
+Node ids are synthetic (`n0`, `n1`, …) because `.`, `/` and `:` are mermaid parse
+errors, and the renderer caps at 40 nodes: a hairball is a worse failure than a
+table, so past the cap it draws what it can and says how much it omitted.
+
+Rendering is pure — it never queries the graph. With `--from-json` it replays a
+saved payload, so the whole run is offline:
+
+```bash
+python tools/blastradius/blastradius.py --symbol get_guest_rls_filters \
+    --from-json evidence/02-impact-before-change.json --no-tests --mermaid
+```
+
 Claim extraction is deliberately structural — only code-shaped tokens count as a claim — so the tool makes **no model call and needs no network or API key**. That was a design decision, not an omission: a review tool that cannot run offline cannot run in CI.
 
 ## Entire Graph findings and verification
@@ -107,7 +160,32 @@ superset/jinja_context.py:297:      for rule in security_manager.get_guest_rls_f
 superset/connectors/sqla/models.py:891: for rule in security_manager.get_guest_rls_filters(self):
 ```
 
-_TODO: paste the final semantic diff of the submitted implementation before 14:40._
+**4. Semantic diff of the Curveball change** — `evidence/04-semantic-diff.json`
+
+```
+entire graph diff --base c2ef90bff2 --head HEAD --json
+```
+
+Symbol-level, not line-level. It names the 20 changed symbols in
+`blastradius.py` — `Symbol.short_name`, `Reach`, `Coverage`,
+`Coverage.confidence`, `Impact`, `classify_reach`, `parse_impact`,
+`graph_impact`, `select_tests`, `gating_rows`, `coverage_verify` among them —
+and the 15 added in `test_blastradius.py`. That is the confidence model as a
+diff: three new types and one new classifier, with the existing pipeline
+functions rewired rather than replaced.
+
+**5. Live verification run** — `evidence/03-with-test-selection.txt`
+
+```
+python tools/blastradius/blastradius.py --symbol get_guest_rls_filters --ci   # exit 1
+```
+
+Eight reachable, six with no `TESTS` edge found, all six labelled `UNVERIFIED`
+with `reach CONFIRMED`, so the gate fires. Two rows came back `HEURISTIC`
+(co-change) and are reported without gating. The completeness note reads *"0 in
+Python (the analysed language); 34 elsewhere (YAML 26, JSON 4, TypeScript 4)"* —
+so nothing was downgraded for a parse failure, and the run proves the
+fully-resolved path is untouched on real data rather than only in a fixture.
 
 ## Noon Curveball: what changed and how we adapted
 
@@ -209,8 +287,8 @@ All checkpoints are on branch `blastradius` and synced to the mirror.
 | 1 | Initial understanding and intended architecture | `01M1TP1KQMM23MXEHZ1FF0W9X8` | `611b59e` | The claim-vs-reality thesis and the first working end-to-end path: checkpoint → graph impact → three buckets. |
 | — | Scope extension: test selection | `01M1TPHAQVCNN0GMAAQ8KKQ49Q` | `2cc4b80` | Deciding that reach should name the tests that can catch it, using graph `TESTS` edges rather than filename heuristics. |
 | 2 | Last stable state before the Noon Curveball | `01M1TPKG7TYGQCJB01DH20TMF9` | `c2ef90b` | Architecture, graph findings, and the dynamic-dispatch gap we had already found — the state the fresh session reconstructed from. |
-| 3 | Response to the Noon Curveball | _TODO_ | _TODO_ | _TODO_ |
-| 4 | Final implementation and verification | _TODO_ | _TODO_ | _TODO_ |
+| 3 | Response to the Noon Curveball | `01M1TRTV1FTYDMXE39EFZZ1DY4` | `d16db0c` | Confidence labelling: the three tiers, the `partial_failures` downgrade, absences worded as absences, and `--ci` gating only on `CONFIRMED` reach. Reconstructed from checkpoint 2 in a fresh session with no prior context. |
+| 4 | Final implementation and verification | _see `git log`_ | _`HEAD`_ | The mermaid renderer and `--from-json` offline replay, plus the live verification run and the semantic diff of the whole Curveball change. |
 
 **Honest note on checkpoint history:** our first commits were made by hand, outside an agent session, so no checkpoint was captured — Entire records agent sessions, and a bare `git commit` has nothing to record. We found this by checking `git for-each-ref refs/entire/checkpoints` and finding it empty, then re-ran the work through an agent session. The checkpoints above are therefore later than the work they describe, and we would rather say so than present a tidy history.
 
@@ -223,6 +301,13 @@ entire plugin install graph
 python tools/blastradius/blastradius.py --symbol get_guest_rls_filters
 python tools/blastradius/blastradius.py --symbol get_guest_rls_filters --ci
 python tools/blastradius/blastradius.py --symbol X --no-tests   # faster, skips test selection
+python tools/blastradius/blastradius.py --symbol X --mermaid    # diagram instead of the table
+
+# Offline: replay saved evidence, no graph query and no index build
+python tools/blastradius/blastradius.py --symbol get_guest_rls_filters \
+    --from-json evidence/02-impact-before-change.json --no-tests --mermaid
+
+pytest tools/blastradius/test_blastradius.py   # 22 tests, no graph needed
 ```
 
 Exit codes: `0` nothing to flag · `1` findings (or, with `--ci`, untested reach) · `2` the graph could not answer.
@@ -248,6 +333,6 @@ Not applicable — we did not opt into the Best Use of Databricks category.
 **Next steps**
 
 - Run in CI on every agent-authored commit, gated on untested reach — `--ci` and the exit codes already exist for this.
-- Post the report as a PR comment before a human opens the diff.
+- Post the report as a PR comment before a human opens the diff — the mermaid block renders inline on GitHub, so the diagram costs nothing extra to ship.
 - Emit the selected tests as a CI job matrix, so the saving is realised rather than just reported.
 - Expose the same report as a tool an agent can call, so the check happens before the change is written rather than after.

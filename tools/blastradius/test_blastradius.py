@@ -28,6 +28,7 @@ Run:  pytest tools/blastradius/test_blastradius.py
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -47,6 +48,10 @@ from blastradius import (  # noqa: E402
     bucket,
     coverage_verify,
     gating_rows,
+    mermaid,
+    mermaid_block,
+    mermaid_escape,
+    mermaid_node,
     parse_impact,
     report,
 )
@@ -189,3 +194,113 @@ def test_file_nodes_are_not_asked_to_verify_their_own_extension() -> None:
         "grep -rn UPDATING.md tests/",
         "pytest -k UPDATING.md",
     ]
+
+
+# --- the diagram ------------------------------------------------------------
+
+
+def node_ids(diagram: str) -> list[str]:
+    return re.findall(r"^    ([A-Za-z][A-Za-z0-9_]*)[\[({]", diagram, re.MULTILINE)
+
+
+def test_mermaid_node_ids_carry_no_path_punctuation(impact: Impact) -> None:
+    """`.` `/` `:` in an id is a mermaid parse error, so ids are synthetic."""
+    ids = node_ids(mermaid("get_guest_rls_filters", impact))
+    assert ids, "no nodes emitted"
+    assert all(re.fullmatch(r"[a-z]+[0-9]*", node) for node in ids), ids
+    assert len(ids) == len(set(ids)), "duplicate node id"
+
+
+def test_mermaid_labels_keep_file_line_so_the_picture_stays_checkable(
+    impact: Impact,
+) -> None:
+    diagram = mermaid("get_guest_rls_filters", impact)
+    assert '"get_rls_cache_key<br/>superset/security/manager.py:5245"' in diagram
+
+
+def test_mermaid_arrow_encodes_reach_confidence(impact: Impact) -> None:
+    """Thick arrow for a resolved relation, dotted for one we could not resolve."""
+    diagram = mermaid("get_guest_rls_filters", impact)
+    arrows = {
+        node: arrow
+        for arrow, node in re.findall(r"focus (==>|-\.->)\|[^|]*\| (n\d+)", diagram)
+    }
+    labels = {
+        node: line for line in diagram.splitlines()
+        for node in [line.strip().split("[")[0].split("{")[0].strip()]
+        if node.startswith("n")
+    }
+
+    confirmed_node = next(n for n, line in labels.items() if "get_rls_cache_key" in line)
+    heuristic_node = next(n for n, line in labels.items() if "UPDATING.md" in line)
+    downgraded_node = next(
+        n for n, line in labels.items() if "get_sqla_row_level_filters" in line
+    )
+
+    assert arrows[confirmed_node] == "==>"
+    assert arrows[heuristic_node] == "-.->"
+    # Downgraded by partial_failures even though the relation is CALLS.
+    assert arrows[downgraded_node] == "-.->"
+
+
+def test_mermaid_border_encodes_coverage_independently_of_reach(impact: Impact) -> None:
+    """The two channels must not imply each other."""
+    downgraded = by_name(impact, "get_sqla_row_level_filters")
+    confirmed = by_name(impact, "get_rls_cache_key")
+    diagram = mermaid(
+        "get_guest_rls_filters",
+        impact,
+        [
+            # HEURISTIC reach, but a test was found: dotted arrow, solid border.
+            Coverage(downgraded.symbol, downgraded.confidence, ("tests/unit_tests/a.py",)),
+            # CONFIRMED reach, nothing found: thick arrow, dashed border.
+            Coverage(confirmed.symbol, confirmed.confidence),
+        ],
+    )
+    covered_line = next(
+        ln for ln in diagram.splitlines() if "get_sqla_row_level_filters" in ln
+    )
+    unresolved_line = next(ln for ln in diagram.splitlines() if "get_rls_cache_key" in ln)
+
+    assert covered_line.endswith(":::covered")
+    assert unresolved_line.endswith(":::unresolved")
+    assert "-->|TESTS|" in diagram
+
+
+def test_mermaid_marks_reach_it_did_not_evaluate_for_coverage(impact: Impact) -> None:
+    """No coverage argument is not the same as coverage that came back empty."""
+    diagram = mermaid("get_guest_rls_filters", impact)
+    assert ":::unresolved" not in diagram
+    assert diagram.count(":::nocoverage") == len(impact.reach)
+
+
+def test_mermaid_truncates_rather_than_drawing_an_unreadable_hairball(
+    impact: Impact,
+) -> None:
+    diagram = mermaid("get_guest_rls_filters", impact, None, max_nodes=2)
+    assert "3 more reachable, not drawn" in diagram
+    assert len(node_ids(diagram)) == 4  # focus + 2 drawn + the truncation node
+
+
+def test_mermaid_escapes_label_punctuation_that_breaks_the_parser() -> None:
+    hostile = Symbol('weird"name#1', "a/b.py", 7)
+    assert mermaid_escape(hostile.display_name) == 'weird#quot;name#35;1'
+    assert '"weird#quot;name#35;1<br/>a/b.py:7"' in mermaid_node("n0", hostile)
+
+
+def test_mermaid_names_a_file_node_by_basename_not_by_extension() -> None:
+    node = mermaid_node("n0", Symbol("UPDATING.md", "UPDATING.md", 0, "file"), "file")
+    assert node == '    n0{{"UPDATING.md"}}'
+    nested = mermaid_node(
+        "n1", Symbol("manager_test.py", "tests/unit_tests/manager_test.py", 0, "file"), "file"
+    )
+    assert '"manager_test.py<br/>tests/unit_tests/manager_test.py"' in nested
+
+
+def test_mermaid_block_is_pasteable_markdown(impact: Impact) -> None:
+    block = mermaid_block("get_guest_rls_filters", impact)
+    assert block.startswith("```mermaid\ngraph LR")
+    assert "\n```\n" in block
+    assert "**Arrow**" in block and "**Node border**" in block
+    # The legend must not restate an absence as a coverage claim.
+    assert "untested" not in block.lower()

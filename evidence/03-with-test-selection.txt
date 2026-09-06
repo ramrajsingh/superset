@@ -1,0 +1,82 @@
+
+blastradius  get_guest_rls_filters
+
+Confidence  CONFIRMED  resolved static relation, endpoint file parsed cleanly
+            HEURISTIC  co-change, or endpoint in a file the graph could not parse
+            UNVERIFIED an absence — the graph found nothing, which is not proof
+                       that nothing is there. Verify command printed per row.
+
+The change said (from commit message):
+
+    feat(blastradius): label every reported row by confidence
+    Graph evidence is evidence, not an oracle, and the report had one voice for
+    every row: a CALLS edge the graph resolved by reading source printed the same
+    as a FILE_CHANGES_WITH edge inferred from two commits, and "no TESTS edge"
+    printed as untested reach -- an absence stated as a fact.
+    Every row now carries a label. CONFIRMED is a resolved static relation whose
+    endpoint file parsed cleanly. HEURISTIC is a co-change edge, or any endpoint in
+    a file the graph listed in its own partial_failures -- that check runs first,
+    because a CALLS edge is only as good as the parse of the file it points into.
+    UNVERIFIED is an absence, worded as one, and printed with the grep and pytest
+    commands that settle it.
+    --ci gates only on CONFIRMED reach with unresolved coverage. Co-change reach,
+    endpoints in unparsed files, and TESTS queries that errored are reported and
+    never fail a build.
+    parse_impact() is split out as a pure function so a saved payload can be
+    replayed without the graph, which is what the new fixture test does: a payload
+    whose partial_failures names the same Python file one of its CALLS edges points
+    into. Fully-resolved rows are pinned unchanged by
+    test_reach_ordering_and_locations_are_unchanged and
+    test_a_clean_payload_downgrades_nothing.
+    Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+    Entire-Checkpoint: 01M1TRTV1FTYDMXE39EFZZ1DY4
+
+8 reachable, never mentioned:
+  ! [HEURISTIC ] UPDATING.md:0                                UPDATING.md  [1 hop, co-change]
+        co-change is a commit-history correlation, not a code relation; confirm with:
+        git log --oneline -10 -- UPDATING.md
+  ! [CONFIRMED ] superset/connectors/sqla/models.py:184       BaseDatasource  [1 hop, type consumer]
+  ! [CONFIRMED ] superset/explorables/base.py:181             Explorable  [1 hop, type consumer]
+  ! [CONFIRMED ] superset/security/guest_token.py:134         GuestTokenRlsRule  [1 hop, type consumer]
+  ! [CONFIRMED ] superset/security/manager.py:1738            SupersetSecurityManager  [1 hop, call]
+  ! [CONFIRMED ] superset/security/manager.py:5240            SupersetSecurityManager.get_guest_rls_filters_str  [1 hop, call]
+  ! [HEURISTIC ] tests/unit_tests/security/manager_test.py:0  manager_test.py  [1 hop, co-change]
+        co-change is a commit-history correlation, not a code relation; confirm with:
+        git log --oneline -10 -- tests/unit_tests/security/manager_test.py
+  ! [CONFIRMED ] superset/security/manager.py:5245            SupersetSecurityManager.get_rls_cache_key  [2 hop, call]
+
+6 reachable symbol(s) with no TESTS edge found — unresolved, verify manually:
+  ? [UNVERIFIED] superset/connectors/sqla/models.py:184  BaseDatasource  [reach CONFIRMED] (gates --ci)
+        grep -rn BaseDatasource tests/
+        pytest -k BaseDatasource
+  ? [UNVERIFIED] superset/explorables/base.py:181  Explorable  [reach CONFIRMED] (gates --ci)
+        grep -rn Explorable tests/
+        pytest -k Explorable
+  ? [UNVERIFIED] superset/security/guest_token.py:134  GuestTokenRlsRule  [reach CONFIRMED] (gates --ci)
+        grep -rn GuestTokenRlsRule tests/
+        pytest -k GuestTokenRlsRule
+  ? [UNVERIFIED] superset/security/manager.py:1738  SupersetSecurityManager  [reach CONFIRMED] (gates --ci)
+        grep -rn SupersetSecurityManager tests/
+        pytest -k SupersetSecurityManager
+  ? [UNVERIFIED] superset/security/manager.py:5240  SupersetSecurityManager.get_guest_rls_filters_str  [reach CONFIRMED] (gates --ci)
+        grep -rn get_guest_rls_filters_str tests/
+        pytest -k get_guest_rls_filters_str
+  ? [UNVERIFIED] superset/security/manager.py:5245  SupersetSecurityManager.get_rls_cache_key  [reach CONFIRMED] (gates --ci)
+        grep -rn get_rls_cache_key tests/
+        pytest -k get_rls_cache_key
+
+Run these tests (from TESTS edges, plus test files that co-change):
+
+    pytest tests/unit_tests/security/manager_test.py
+
+Absence of evidence [UNVERIFIED]
+  Calls dispatched through a module-level singleton are not attributed. Measured case in this repo: callers of get_guest_rls_filters at superset/jinja_context.py:297 and superset/connectors/sqla/models.py:891 reach it via the `security_manager` singleton and carry no CALLS edge.
+  Check this run against source: grep -rn get_guest_rls_filters --include='*.py' .
+
+Graph completeness: 34 file(s) parsed with errors.
+  0 in Python (the analysed language); 34 elsewhere (YAML 26, JSON 4, TypeScript 4)
+  No Python file failed to parse, so no row above was downgraded for it.
+  ~ docs/src/pages/community.tsx: file parsed with syntax errors; semantic facts may be incomplete
+  ~ evidence/01-definition.json: file record emitted but symbol parsing skipped
+  ~ evidence/02-impact-before-change.json: file record emitted but symbol parsing skipped
+  ~ ... and 31 more
