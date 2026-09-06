@@ -222,6 +222,64 @@ def claimed_names(text: str) -> set[str]:
     return names
 
 
+def select_tests(reach: list[Reach], repo: str) -> tuple[dict[str, list[str]], list[Symbol]]:
+    """The minimal test set for this blast radius.
+
+    Asks the graph for TESTS edges pointing at each reachable symbol, which is
+    real evidence rather than a filename heuristic. Symbols with no incoming
+    TESTS edge are returned separately: untested reach is the most actionable
+    line in the report, because it is where a regression would land silently.
+    """
+    covered: dict[str, list[str]] = {}
+    uncovered: list[Symbol] = []
+
+    for hop in reach:
+        if hop.symbol.file_path.startswith("tests/"):
+            continue  # a test is not something a test needs to cover
+        try:
+            payload = run_json(
+                [
+                    "entire", "graph", "neighbors",
+                    "--symbol", f"{hop.symbol.file_path}:{hop.symbol.line}",
+                    "--repo", repo,
+                    "--relation", "TESTS",
+                    "--direction", "in",
+                    "--format", "json",
+                ],
+                timeout=120,
+            )
+        except GraphError:
+            continue
+
+        tests: list[str] = []
+        for section in ("neighbors", "incoming", "in", "entries"):
+            block = payload.get(section) if isinstance(payload, dict) else None
+            entries = block.get("entries", []) if isinstance(block, dict) else (
+                block if isinstance(block, list) else []
+            )
+            for entry in entries:
+                endpoint = entry.get("endpoint", entry) if isinstance(entry, dict) else {}
+                path = endpoint.get("file_path")
+                if path:
+                    tests.append(str(path))
+
+        if tests:
+            covered[hop.symbol.name] = sorted(set(tests))
+        else:
+            uncovered.append(hop.symbol)
+
+    return covered, uncovered
+
+
+def test_command(covered: dict[str, list[str]], reach: list[Reach]) -> str | None:
+    """The pytest invocation a CI job should run for this change."""
+    paths = {path for paths in covered.values() for path in paths}
+    # Test files that co-change with the touched code are weaker evidence than a
+    # TESTS edge, but they are still a better guess than running the whole suite.
+    paths |= {r.symbol.file_path for r in reach if r.symbol.file_path.startswith("tests/")}
+    return f"pytest {' '.join(sorted(paths))}" if paths else None
+
+
 def bucket(claim: Claim, reach: list[Reach]) -> tuple[list[Reach], list[Reach]]:
     """confirmed = claimed and reachable; silent = reachable and unmentioned."""
     confirmed, silent = [], []
@@ -237,7 +295,8 @@ def bucket(claim: Claim, reach: list[Reach]) -> tuple[list[Reach], list[Reach]]:
 
 
 def report(symbol: str, claim: Claim, confirmed: list[Reach], silent: list[Reach],
-           warnings: list[str]) -> str:
+           warnings: list[str], covered: dict[str, list[str]] | None = None,
+           uncovered: list[Symbol] | None = None, command: str | None = None) -> str:
     out = [f"\nblastradius  {symbol}", ""]
     if claim.summary:
         out += [f"The change said (from {claim.source}):", ""]
@@ -262,6 +321,21 @@ def report(symbol: str, claim: Claim, confirmed: list[Reach], silent: list[Reach
             out.append(f"  . {hop.symbol.location}  {hop.symbol.name}")
         out.append("")
 
+    if uncovered:
+        out.append(f"{len(uncovered)} reachable with no test covering them:")
+        for sym in uncovered:
+            out.append(f"  x {sym.location}  {sym.name}")
+        out.append("")
+
+    if command:
+        covered_count = len(covered or {})
+        out += [
+            f"Run these tests ({covered_count} reachable symbol(s) covered by a TESTS edge):",
+            "",
+            f"    {command}",
+            "",
+        ]
+
     if warnings:
         out.append(f"Graph completeness: {len(warnings)} file(s) parsed with errors;")
         out.append("findings below may be incomplete. Verify against source.")
@@ -277,6 +351,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ref", default="HEAD", help="checkpoint id or commit (default: HEAD)")
     parser.add_argument("--repo", default=".", help="repository path")
     parser.add_argument("--depth", type=int, default=2, help="caller depth (max 2)")
+    parser.add_argument(
+        "--no-tests", action="store_true", help="skip test selection (faster)"
+    )
+    parser.add_argument(
+        "--ci", action="store_true", help="exit non-zero on reach no test covers"
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -287,7 +367,18 @@ def main(argv: list[str] | None = None) -> int:
 
     claim = load_claim(args.ref, args.repo)
     confirmed, silent = bucket(claim, reach)
-    print(report(args.symbol, claim, confirmed, silent, warnings))
+
+    covered: dict[str, list[str]] = {}
+    uncovered: list[Symbol] = []
+    command: str | None = None
+    if not args.no_tests:
+        covered, uncovered = select_tests(reach, args.repo)
+        command = test_command(covered, reach)
+
+    print(report(args.symbol, claim, confirmed, silent, warnings, covered, uncovered, command))
+    if args.ci:
+        # A CI gate fails on reach that no test can catch, not on reach itself.
+        return 1 if uncovered else 0
     return 1 if silent else 0
 
 
