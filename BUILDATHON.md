@@ -1,5 +1,15 @@
 # blastradius
 
+| | |
+|---|---|
+| Track | 2 — Build with Graph Intelligence |
+| Fork | `github.com/ramrajsingh/superset` |
+| Branch | **`blastradius`** — `master` is protected on the fork, so all work lands here |
+| Entire mirror | `entire://aws-ap-south-1.entire.io/gh/ramrajsingh/superset` (India region) |
+| Final commit | _TODO: update after the Curveball work lands_ |
+| Implementation | `tools/blastradius/blastradius.py` |
+| Graph evidence | `evidence/` |
+
 ## One-sentence summary
 
 Given a change an agent made, blastradius reports what the change actually reaches — and which tests can catch it — by checking the agent's own account of its work against structural evidence from the Entire Graph.
@@ -88,12 +98,15 @@ _TODO — constraint verbatim, the assumption it attacked, the checkpoint the fr
 
 ## Checkpoint links and what each checkpoint proves
 
-| # | Milestone | Checkpoint | Commit |
-|---|---|---|---|
-| 1 | Initial understanding and intended architecture | `01M1TP1KQMM23MXEHZ1FF0W9X8` | `611b59e` |
-| 2 | Test selection — scope extension from the blast radius | `01M1TPHAQVCNN0GMAAQ8KKQ49Q` | `2cc4b80` |
-| 3 | Response to the Noon Curveball | _TODO_ | _TODO_ |
-| 4 | Final implementation and verification | _TODO_ | _TODO_ |
+All checkpoints are on branch `blastradius` and synced to the mirror.
+
+| # | Milestone | Checkpoint | Commit | What it proves |
+|---|---|---|---|---|
+| 1 | Initial understanding and intended architecture | `01M1TP1KQMM23MXEHZ1FF0W9X8` | `611b59e` | The claim-vs-reality thesis and the first working end-to-end path: checkpoint → graph impact → three buckets. |
+| — | Scope extension: test selection | `01M1TPHAQVCNN0GMAAQ8KKQ49Q` | `2cc4b80` | Deciding that reach should name the tests that can catch it, using graph `TESTS` edges rather than filename heuristics. |
+| 2 | Last stable state before the Noon Curveball | `01M1TPKG7TYGQCJB01DH20TMF9` | `c2ef90b` | Architecture, graph findings, and the dynamic-dispatch gap we had already found — the state the fresh session reconstructed from. |
+| 3 | Response to the Noon Curveball | _TODO_ | _TODO_ | _TODO_ |
+| 4 | Final implementation and verification | _TODO_ | _TODO_ | _TODO_ |
 
 **Honest note on checkpoint history:** our first commits were made by hand, outside an agent session, so no checkpoint was captured — Entire records agent sessions, and a bare `git commit` has nothing to record. We found this by checking `git for-each-ref refs/entire/checkpoints` and finding it empty, then re-ran the work through an agent session. The checkpoints above are therefore later than the work they describe, and we would rather say so than present a tidy history.
 
