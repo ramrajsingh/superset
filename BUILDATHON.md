@@ -16,6 +16,8 @@
 
 Given a change an agent made, blastradius reports what the change actually reaches — and which tests can catch it — by checking the agent's own account of its work against structural evidence from the Entire Graph.
 
+From the blast radius we also derive the tests that need to run for regression. The graph, the blast radius and those regression tests can all be seen visually, colour-coded for confidence and blast distance.
+
 ## Problem, intended user and why it matters
 
 The user is whoever has to approve a diff an agent wrote, and whoever owns the CI bill for it.
