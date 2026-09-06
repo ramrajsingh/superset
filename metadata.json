@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TRTV1FTYDMXE39EFZZ1DY4",
+  "strategy": "manual-commit",
+  "branch": "blastradius",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "evidence/impact_graph_impact.json",
+    "evidence/impact_select_tests.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 92,
+    "cache_creation_tokens": 115403,
+    "cache_read_tokens": 5496124,
+    "output_tokens": 43961,
+    "api_call_count": 46
+  }
+}
