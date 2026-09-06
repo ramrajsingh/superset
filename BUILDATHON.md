@@ -6,7 +6,9 @@
 | Fork | `github.com/ramrajsingh/superset` |
 | Branch | **`blastradius`** — `master` is protected on the fork, so all work lands here |
 | Entire mirror | `entire://aws-ap-south-1.entire.io/gh/ramrajsingh/superset` (India region) |
-| Final commit | tip of `blastradius` — `git log -1 --oneline blastradius` (a commit cannot contain its own hash) |
+| **Web console** | **`https://in.console.entire.io/gh/ramrajsingh/superset`** — this account is in the **`in`** jurisdiction (`entire auth status` → `Jurisdiction: in`), so the global `entire.io` returns *Not found*. Use the `in.` host. |
+| Databricks | Notebook + data at `/Users/ramrajsingh@gmail.com/blastradius` in workspace `o=7474654234683185` |
+| Final commit | `74ca35d` (+ this doc commit on top — `git log -1 --oneline blastradius` for the tip; a commit cannot contain its own hash) |
 | Implementation | `tools/blastradius/blastradius.py` |
 | Graph evidence | `evidence/` |
 
@@ -329,7 +331,11 @@ All checkpoints are on branch `blastradius` and synced to the mirror.
 | — | Scope extension: test selection | `01M1TPHAQVCNN0GMAAQ8KKQ49Q` | `2cc4b80` | Deciding that reach should name the tests that can catch it, using graph `TESTS` edges rather than filename heuristics. |
 | 2 | Last stable state before the Noon Curveball | `01M1TPKG7TYGQCJB01DH20TMF9` | `c2ef90b` | Architecture, graph findings, and the dynamic-dispatch gap we had already found — the state the fresh session reconstructed from. |
 | 3 | Response to the Noon Curveball | `01M1TRTV1FTYDMXE39EFZZ1DY4` | `d16db0c` | Confidence labelling: the three tiers, the `partial_failures` downgrade, absences worded as absences, and `--ci` gating only on `CONFIRMED` reach. Reconstructed from checkpoint 2 in a fresh session with no prior context. |
-| 4 | Final implementation and verification | _see `git log`_ | _`HEAD`_ | The mermaid renderer and `--from-json` offline replay, plus the live verification run and the semantic diff of the whole Curveball change. |
+| 4 | Final implementation and verification | `01M1TZW447NNAMJJDCDGNP1VFF` | `74ca35d` | The mermaid renderer with confidence colour and blast-radius intensity, `--from-json` offline replay, the Databricks dataset and notebook, the live verification run, and the semantic diff of the whole Curveball change. |
+
+Open these at **`https://in.console.entire.io/gh/ramrajsingh/superset`**, or locally
+with `entire checkpoint explain <id>`. All ten checkpoint refs are on the mirror —
+verify with `git ls-remote origin 'refs/entire/*'`.
 
 **Honest note on checkpoint history:** our first commits were made by hand, outside an agent session, so no checkpoint was captured — Entire records agent sessions, and a bare `git commit` has nothing to record. We found this by checking `git for-each-ref refs/entire/checkpoints` and finding it empty, then re-ran the work through an agent session. The checkpoints above are therefore later than the work they describe, and we would rather say so than present a tidy history.
 
@@ -357,9 +363,25 @@ Exit codes: `0` nothing to flag · `1` findings (or, with `--ci`, untested reach
 
 ## Databricks use, data sources and limitations (if applicable)
 
-**Category opt-in is not decided** — the assets below exist and run, but nothing
-has been deployed to a Databricks workspace and we have not entered the Best Use
-of Databricks category.
+**Deployed and openable.** Workspace `o=7474654234683185`, folder
+`/Users/ramrajsingh@gmail.com/blastradius`:
+
+| Object | Path |
+|---|---|
+| Notebook | `/Users/ramrajsingh@gmail.com/blastradius/blastradius_graph_viz` |
+| Data | `/Users/ramrajsingh@gmail.com/blastradius/data/{graph_nodes,graph_edges,graph_partial_failures}.csv` |
+
+Imported with the Databricks CLI as the workspace owner; the notebook was
+exported back and diffed byte-for-byte against the repo copy. It resolves `data/`
+relative to its own notebook path, so it reads the uploaded CSVs where they are
+rather than at a hardcoded path.
+
+**Not run on a cluster.** The workspace has no clusters and its only warehouse
+(`Serverless Starter Warehouse`) is `STOPPED`. Starting compute is billable, so
+we left that to the owner — the notebook is verified by local execution of every
+cell instead (both the CSV path and the embedded fallback).
+
+**Category opt-in is the owner's call** and is not claimed here.
 
 `databricks/` holds the graph as a dataset plus a notebook that reads it:
 
