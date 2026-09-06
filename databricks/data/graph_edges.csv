@@ -1,0 +1,16 @@
+focus,src,dst,relation,edge_label,depth,confidence,caveat,structural
+get_guest_rls_filters,superset/security/manager.py:5033,UPDATING.md:0,FILE_CHANGES_WITH,co-change,1,HEURISTIC,"co-change is a commit-history correlation, not a code relation",False
+get_guest_rls_filters,superset/security/manager.py:5033,superset/connectors/sqla/models.py:184,PARAM_TYPE,type consumer,1,CONFIRMED,,True
+get_guest_rls_filters,superset/security/manager.py:5033,superset/explorables/base.py:181,PARAM_TYPE,type consumer,1,CONFIRMED,,True
+get_guest_rls_filters,superset/security/manager.py:5033,superset/security/guest_token.py:134,RETURNS_TYPE,type consumer,1,CONFIRMED,,True
+get_guest_rls_filters,superset/security/manager.py:5033,superset/security/manager.py:1738,CALLS,call,1,CONFIRMED,,True
+get_guest_rls_filters,superset/security/manager.py:5033,superset/security/manager.py:5240,CALLS,call,1,CONFIRMED,,True
+get_guest_rls_filters,superset/security/manager.py:5033,tests/unit_tests/security/manager_test.py:0,FILE_CHANGES_WITH,co-change,1,HEURISTIC,"co-change is a commit-history correlation, not a code relation",False
+get_guest_rls_filters,superset/security/manager.py:5033,superset/security/manager.py:5245,CALLS,call,2,CONFIRMED,,True
+graph_impact,tools/blastradius/blastradius.py:137,tools/blastradius/blastradius.py:348,CALLS,call,1,CONFIRMED,,True
+graph_impact,tools/blastradius/blastradius.py:137,tools/blastradius/blastradius.py:78,RETURNS_TYPE,type consumer,1,CONFIRMED,,True
+graph_impact,tools/blastradius/blastradius.py:137,tools/blastradius/blastradius.py:0,CALLS,call,2,CONFIRMED,,True
+select_tests,tools/blastradius/blastradius.py:225,tools/blastradius/blastradius.py:348,CALLS,call,1,CONFIRMED,,True
+select_tests,tools/blastradius/blastradius.py:225,tools/blastradius/blastradius.py:64,RETURNS_TYPE,type consumer,1,CONFIRMED,,True
+select_tests,tools/blastradius/blastradius.py:225,tools/blastradius/blastradius.py:78,PARAM_TYPE,type consumer,1,CONFIRMED,,True
+select_tests,tools/blastradius/blastradius.py:225,tools/blastradius/blastradius.py:0,CALLS,call,2,CONFIRMED,,True

@@ -1,0 +1,16 @@
+node_id,name,qualified_name,kind,file_path,start_line,language,is_focus
+superset/security/manager.py:5033,get_guest_rls_filters,SupersetSecurityManager.get_guest_rls_filters,method,superset/security/manager.py,5033,Python,True
+UPDATING.md:0,UPDATING.md,UPDATING.md,file,UPDATING.md,0,,False
+superset/connectors/sqla/models.py:184,BaseDatasource,BaseDatasource,class,superset/connectors/sqla/models.py,184,,False
+superset/explorables/base.py:181,Explorable,Explorable,class,superset/explorables/base.py,181,,False
+superset/security/guest_token.py:134,GuestTokenRlsRule,GuestTokenRlsRule,class,superset/security/guest_token.py,134,,False
+superset/security/manager.py:1738,SupersetSecurityManager,SupersetSecurityManager,tool,superset/security/manager.py,1738,,False
+superset/security/manager.py:5240,get_guest_rls_filters_str,SupersetSecurityManager.get_guest_rls_filters_str,method,superset/security/manager.py,5240,,False
+tests/unit_tests/security/manager_test.py:0,manager_test.py,manager_test.py,file,tests/unit_tests/security/manager_test.py,0,,False
+superset/security/manager.py:5245,get_rls_cache_key,SupersetSecurityManager.get_rls_cache_key,method,superset/security/manager.py,5245,,False
+tools/blastradius/blastradius.py:137,graph_impact,graph_impact,function,tools/blastradius/blastradius.py,137,Python,True
+tools/blastradius/blastradius.py:348,main,main,function,tools/blastradius/blastradius.py,348,,False
+tools/blastradius/blastradius.py:78,Reach,Reach,class,tools/blastradius/blastradius.py,78,,False
+tools/blastradius/blastradius.py:0,blastradius.py,blastradius.py,file,tools/blastradius/blastradius.py,0,,False
+tools/blastradius/blastradius.py:225,select_tests,select_tests,function,tools/blastradius/blastradius.py,225,Python,True
+tools/blastradius/blastradius.py:64,Symbol,Symbol,class,tools/blastradius/blastradius.py,64,,False

@@ -357,7 +357,34 @@ Exit codes: `0` nothing to flag · `1` findings (or, with `--ci`, untested reach
 
 ## Databricks use, data sources and limitations (if applicable)
 
-Not applicable — we did not opt into the Best Use of Databricks category.
+**Category opt-in is not decided** — the assets below exist and run, but nothing
+has been deployed to a Databricks workspace and we have not entered the Best Use
+of Databricks category.
+
+`databricks/` holds the graph as a dataset plus a notebook that reads it:
+
+| Asset | Contents |
+|---|---|
+| `data/graph_nodes.csv` | 15 symbols — id, qualified name, kind, `file:line`, language |
+| `data/graph_edges.csv` | 15 edges across three analysed symbols — relation, depth, confidence, downgrade reason |
+| `data/graph_partial_failures.csv` | 95 rows of what the graph could not parse, by focus |
+| `blastradius_graph_viz.py` | Databricks notebook: reach by confidence, blast radius by distance, a NetworkX drawing, the parse-failure breakdown, and the CLI's own mermaid via `displayHTML` |
+
+The notebook uses the same encoding as the CLI diagram — edge colour is reach
+confidence, node alpha is distance — so the two views are one analysis rather
+than two implementations that can drift.
+
+**Verified by running it**, with `dbutils`, `display` and `displayHTML` stubbed
+and Spark absent so the pandas fallback is exercised: all seven code cells
+execute against the real CSVs. Rendered figures are in
+`evidence/rendered/notebook-fig*.png`.
+
+**Limitations, which are the dataset's and not the notebook's:**
+
+- **No `UNVERIFIED` rows.** An absence in an edge table reads as a fact. "No `TESTS` edge found" stays in the CLI, where it ships with the command that settles it.
+- **Undercounts reach.** The dynamically-dispatched callers at `superset/jinja_context.py:297` and `superset/connectors/sqla/models.py:891` carry no `CALLS` edge, so they are absent from `graph_edges.csv`. Any aggregate over these rows is a lower bound.
+- **Confidence is not severity.** It says how well we know an edge exists, not how much it should worry you.
+- Three analysed symbols, depth 2 — a demonstration slice, not a repository-wide export.
 
 ## Known limitations and next steps
 
