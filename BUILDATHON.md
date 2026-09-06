@@ -370,6 +370,12 @@ of Databricks category.
 | `data/graph_partial_failures.csv` | 95 rows of what the graph could not parse, by focus |
 | `blastradius_graph_viz.py` | Databricks notebook: reach by confidence, blast radius by distance, a NetworkX drawing, the parse-failure breakdown, and the CLI's own mermaid via `displayHTML` |
 
+The notebook is a **single-file import**: it reads the CSVs when it can reach
+them (Spark first, then local pandas) and otherwise falls back to a copy of the
+125 rows embedded in the file, printing which source it used — a stale embedded
+copy and a fresh CSV are not the same evidence. Nothing has to be uploaded
+first.
+
 The notebook uses the same encoding as the CLI diagram — edge colour is reach
 confidence, node alpha is distance — so the two views are one analysis rather
 than two implementations that can drift.
